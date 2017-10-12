@@ -1,0 +1,33 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>修改{{ srv.name }}配置文件</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <!-- Bootstrap 3.3.5 -->
+    <link rel="stylesheet" href="{% static 'admin_lte/bootstrap/css/bootstrap.min.css' %}">
+</head>
+<body>
+<h3 style="text-align: center;">修改{{ srv.name }}配置文件</h3>
+<form role="form" action="{% url 'service:update_config' srv.id %}" method="post">
+    {% csrf_token %}
+    <div class="form-group ">
+        <div class="row">
+        <div class="col-sm-offset-1 col-sm-10">
+            <label for="config_content">Config.ini 文件内容</label>
+            <textarea class="form-control" name="config_content" id="config_content" cols="30" rows="20">{{ content }}</textarea>
+        </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-sm-offset-10 col-sm-2"><button type="submit" class="btn btn-primary" style="text-align: center">提交修改</button></div>
+    </div>
+
+
+</form>
+<script src="{% static 'admin_lte/plugins/jQuery/jQuery-2.1.4.min.js' %}"></script>
+<script src="{% static 'admin_lte/bootstrap/js/bootstrap.min.js' %}"></script>
+</body>
+</html>

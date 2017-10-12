@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+
+{% block css %}
+    <style>
+    form.form-horizontal label.control-label { text-align: left;}
+    .file-box{ position:relative;width:70px}
+    .txt{ height:22px; border:1px solid #cdcdcd; width:180px;}
+{#    .btn{ background-color:#FFF; border:1px solid #CDCDCD;height:24px; width:70px;}#}
+    .file{ position:absolute; top:0; left:0px; height:24px; filter:alpha(opacity:0);opacity: 0;width:70px }
+    #textfield{ height: 30px; font-size: 12px;  }
+    table th, table, td{text-align: center;}
+    #file_list button { height: 28px; font-size: 12px;}
+    #file_list td:nth-last-child(1) { padding:4px;}
+    #selected_server_list { padding-top:20px;}
+    .large .modal-dialog {
+        width: 60%; /* respsonsive width */
+    }
+    table.table > tbody > tr > td.progress_bar{
+        padding: 8px 0 0;
+    }
+    .upload_progress{
+        height: 3px;
+        margin-top: 5px;
+        background: #4af;
+        width: 0%;
+    }
+    </style>
+{% endblock %}
+{% block body %}
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper">
+            <!-- Content Header (Page header) -->
+            <section class="content-header">
+                <h1>
+                    分发文件
+                </h1>
+                <ol class="breadcrumb">
+                    <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                    <li class="active">分发文件</li>
+                </ol>
+            </section>
+
+            <!-- Main content -->
+            <section class="content">
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="box">
+
+                            <div class="box-header row">
+                                <div id="tips"></div>
+                                <div class="col-sm-10 col-sm-offset-1">
+                                    <form action="#" method="post" role="form" class="form-horizontal">
+{#                                    <div class="form-group">#}
+{#                                      <label for="id_name" class="col-sm-2 control-label">任务名称</label>#}
+{#                                     <div class="col-sm-10">#}
+{#                                        <input type="text" form="file_form" class="form-control" id="id_name" name="name" placeholder="任务名称" required value="{{ ft_name }}">#}
+{#                                      </div>#}
+{#                                    </div>#}
+                                    <div class="panel panel-default">
+                                      <div class="panel-heading">
+                                        <h3 class="panel-title" style="float:left;">源文件上传</h3>
+                                          <div class="file-box" style="float:right;">
+                                            <input type='button' class='btn btn-primary' id='textfield' value='浏览...' />
+                                            <input type="file" name="uploadFile" data-flag="0" id="uploadFile" class="file input_file" size="28" />
+                                          </div>
+                                          <div style="clear:both;"></div>
+                                      </div>
+                                      <div class="panel-body">
+                                        <table id="file_list" class="table table-bordered">
+                                            <thead>
+                                            <tr>
+                                                <th>文件名</th>
+                                                <th>上传状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="box-body table-responsive row">
+                                <div class="col-sm-10 col-sm-offset-1">
+                                    <form id="file_form" action="{% url 'operating:filetransfer' %}" method="post" role="form" class="form-horizontal">
+                                    <div class="panel panel-default">
+                                      <div class="panel-heading">
+                                        <h3 class="panel-title">目标文件</h3>
+                                      </div>
+                                      <div class="panel-body">
+                                        <div class="form-group">
+                                          <label for="id_dest" class="col-sm-2 control-label">目标路径</label>
+                                         <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="id_dest" name="dest" placeholder="目标路径" required>
+                                          </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                          <label for="id_user" class="col-sm-2 control-label">执行账户</label>
+                                         <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="id_user" name="user" placeholder="执行账户" value="root" readonly required>
+                                          </div>
+                                        </div>
+
+                                        <div class="form-group">
+                                          <label for="id_user" class="col-sm-2 control-label">目标主机</label>
+                                         <div class="col-sm-10">
+                                            <button type="button" id="select_server" class="btn btn-primary">选择服务器</button>
+                                            <div id="selected_server_list">
+                                                <table id="selected_server_table" class="table table-bordered table-hover">
+                                                    <thead>
+                                                    <tr class="success">
+                                                        <th>主机名</th>
+                                                        <th>内网IP</th>
+                                                        <th>外网IP</th>
+                                                        <th>操作</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    {% for srv in servers %}
+                                                    <tr>
+                                                        <td>{{ srv.InstanceName }}<input type="hidden" name="server_ids" value="{{ srv.id }}"></td>
+                                                        <td>{{ srv.InnerIpAddress }}</td>
+                                                        <td>{{ srv.PublicIpAddress }}</td>
+                                                        <td><button type="button" class="btn btn-default delete_file">删除</button></td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                             <button type="button" id="submit" class="btn btn-primary">开始文件分发</button>
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                    </div>
+                                    </form>
+
+                                    <div id="result_table" class="panel panel-default">
+                                      <div class="panel-heading">执行结果</div>
+                                      <div class="panel-body">
+                                        <p>暂无</p>
+                                      </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </section><!-- /.content -->
+        </div><!-- /.content-wrapper -->
+
+<div class="modal fade large" id="myModal" tabindex="-1" role="dialog"
+     aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close"
+                        data-dismiss="modal" aria-hidden="true">
+                    &times;
+                </button>
+                <h4 class="modal-title" id="myModalLabel">
+                    <strong>请选择目标服务器</strong>
+                </h4>
+            </div>
+            <div class="modal-body">
+
+                <table id="server_table" class="display table table-bordered table-hover dataTable" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>主机名</th>
+                        <th>内网IP</th>
+                        <th>外网IP</th>
+                        <th>配置</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default"
+                        data-dismiss="modal">取消
+                </button>
+                <button type="button" class="btn btn-primary"
+                        id="add_server_btn">添加
+                </button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal -->
+
+</div>
+
+{% endblock %}
+{% block script %}
+    <script src="{% static 'js/jquery.html5_upload.js' %}"></script>
+    <script>
+    var url_server_list = "{% url 'server:job_list_page' %}";
+    var url_file_upload = '{% url 'operating:fileupload' %}';
+    var url_filetransfer_submit = '{% url 'operating:filetransfer' %}';
+    
+    </script>
+    <script src="{% static 'js/page/filetransfer.js' %}"></script>
+{% endblock %}

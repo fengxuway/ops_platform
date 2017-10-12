@@ -1,0 +1,226 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+{% block css %}
+    <style>
+    .fa-pencil-square {
+        float: right;
+        margin-top: 10px;
+        margin-right: 10px;
+    }
+    </style>
+
+{% endblock %}
+{% block body %}
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper">
+            <!-- Content Header (Page header) -->
+            <section class="content-header">
+                <h1>
+                    主机组列表
+                </h1>
+                <ol class="breadcrumb">
+                    <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                    <li><a href="{% url 'server:index' %}"><i class="fa fa-dashboard"></i> 主机列表</a></li>
+                    <li class="active">主机组列表</li>
+                </ol>
+            </section>
+
+            <!-- Main content -->
+            <section class="content">
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="box">
+                            <div class="box-header">
+                                <button type="button" class="btn btn-primary" onclick="window.location.href='{% url 'server:add_group' %}'">添加主机组</button>
+                                <button type="button" class="btn btn-primary" id="batch_delete">删除所选</button>
+                                <button type="button" class="btn btn-primary" onclick="window.location.href='{% url 'server:upload' %}'">导入</button>
+
+                            </div><!-- /.box-header -->
+                            <div class="box-body table-responsive">
+                                <table id="example" class="display table table-bordered table-hover dataTable" cellspacing="0" width="100%">
+                                    <thead>
+                                    <tr>
+                                        <th style="padding-right:8px"><input type="checkbox" name="check_all"></th>
+                                        <th>主机组名</th>
+                                        <th>主机数量</th>
+                                        <th>备注</th>
+                                        <th>操作</th>
+                                        <th>类别</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody></tbody>
+
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section><!-- /.content -->
+        </div><!-- /.content-wrapper -->
+
+
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">主机连接日志</h4>
+      </div>
+      <div class="modal-body" id="log_content">
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" id="connect_again">重新连接</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endblock %}
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js"%}"></script>
+    <script>
+
+        $(function(){
+            var $table = $("#example");
+            var table = $table.DataTable({
+{#                "bFilter": false,//去掉搜索框#}
+                //"bAutoWidth": true, //自适应宽度
+                "sPaginationType" : "full_numbers",
+                "bDestroy" : true,
+                "bProcessing" : true,
+                "iDisplayLength": 10,
+                "sAjaxSource" : "{% url 'server:group_page' %}",
+                "bServerSide" : true,
+                "columns" : [
+                    { "data" : "id" },
+                    { "data" : "name"},
+                    { "data" : "count" },
+                    { "data" : "remark" },
+                    { "data" : "id"},
+                    { "data" : "label", "visible": false}
+                ],
+                "columnDefs": [
+                    {
+                        "orderable": false,
+{#                        "className": 'select-checkbox',#}
+                        "targets":   0,
+                        "render": function(data, type, row, meta){
+                            return '<input type="checkbox" name="selected_server" value="'+data+'">';
+                        }
+                    },{
+                        "targets":   1,
+                        "render": function(data, type, row, meta){
+                            var url = "{% url 'server:index' %}?kw=" + data + "&search_type=group";
+                            if(row.label == 1){
+                                return '<i title="自定义组" class="fa fa-pencil-square" aria-hidden="true"></i><a href="'+url+'" >'+data+'</a>';
+                            }
+                            return '<a href="'+url+'" >'+data+'</a>';
+                        }
+                    },{
+                        "targets":   -2,
+                        "render": function(data, type, row, meta){
+                            if(row.label == 1){
+                                var update_url = '{% url 'server:update_group' gid=99999 %}'.replace(/99999/g, row.id);
+                                return  '<a href="javascript:void(0);" class="grp-delete" data-id="'+row.id+'"><i class="fa fa-times" aria-hidden="true"></i>删除</a>&nbsp;&nbsp;'+
+                                        '<a class="grp-edit" ' +
+                                        'href="'+update_url+'"><i class="fa fa-pencil-square-o" aria-hidden="true"></i>编辑</a>';
+                            }else{
+                                return '<a href="javascript:void(0);" class="grp-delete" data-id="'+row.id+'"><i class="fa fa-times" aria-hidden="true"></i>删除</a>';
+                            }
+                        }
+                    }
+                ],
+                "order": [[ 5, 'desc' ]],
+
+                "oLanguage" : {
+                    "sSearch": "搜索：",
+                    "sProcessing" : "正在加载中......",
+                    "sLengthMenu" : "每页显示 _MENU_ 条记录",
+                    "sZeroRecords" : "没有数据！",
+                    "sEmptyTable" : "表中无数据存在！",
+                    "sInfo" : "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录",
+                    "sInfoEmpty" : "显示0到0条记录",
+                    "sInfoFiltered" : "数据表中共为 _MAX_ 条记录",
+                    //"sSearch" : "搜索",
+                    "oPaginate" : {
+                        "sFirst" : "首页",
+                        "sPrevious" : "上一页",
+                        "sNext" : "下一页",
+                        "sLast" : "末页"
+                    }
+                }
+            });
+            // 选中操作
+            table.on( 'click', 'tr[role="row"]', function () {
+                $(this).toggleClass('selected');
+                $(this).find("td:first").find("input[name='selected_server']").prop('checked', $(this).hasClass("selected"));
+                var select_all = true;
+                $table.find("input[name='selected_server']").each(function(){
+                    if(!$(this).prop("checked")){
+                        select_all = false;
+                        return false;
+                    }
+                });
+                $table.find("input[name='check_all']").prop('checked', select_all);
+            } );
+
+            $table.find("input[name='check_all']").click(function () {
+                // 判断是否已经存在选中
+                if (!$(this).prop("checked")) {
+                    $table.find("input[name='selected_server']:checked").prop('checked', false).parents("tr").removeClass("selected");
+                } else {
+                    $table.find("input[name='selected_server']:not(:checked)").prop('checked', true).parents("tr").addClass("selected");
+                }
+            });
+
+
+            function batch_delete(grp_ids){
+                simple_ajax({
+                    url: "{% url 'server:remove_group' %}",
+                    data:{"id": grp_ids},
+                    success:function(data){
+                        if(data.result == true){
+                            table.ajax.reload()
+                        }else{
+                            alert("删除失败！" + data.message)
+                        }
+                    }
+                })
+            }
+
+            $("#batch_delete").click(function(){
+                // console.log(table.rows('.selected').data())
+                var datas = table.rows('.selected').data();
+                var length = datas.length;
+                if(length > 0){
+                    if(confirm("您确定要删除这" + length + "个主机组吗？不会直接删除该组下的主机。")){
+                        var grp_ids = [];
+                        for(i=0; i<length; i++){
+                            grp_ids.push(datas[i].id);
+                        }
+                        batch_delete(grp_ids)
+                    }
+                }else{
+                    alert('请至少选择一个Server');
+                }
+            });
+            $table.delegate('.grp-delete', 'click', function(){
+                if(confirm("您确定要删除该主机组吗？不会直接删除该组下的主机。")){
+                    batch_delete([$(this).attr("data-id")]);
+                }
+                return false;
+            });
+            $table.delegate('.server-update', 'click', function(){
+                window.location.href = '/server/update/' + $(this).attr("data-id") + '/';
+            });
+
+            var $myModal = $("#myModal");
+            var $connect_again = $("#connect_again");
+
+        })
+    </script>
+{% endblock %}

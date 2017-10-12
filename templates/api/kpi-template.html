@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>异常详情</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="/static/admin_lte/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/admin_lte/plugins/jvectormap/jquery-jvectormap-1.2.2.css">
+    <link rel="stylesheet" href="/static/admin_lte/dist/css/AdminLTE.min.css">
+  </head>
+  <body class="hold-transition skin-blue sidebar-mini">
+    <div class="wrapper">
+
+      <div class="content-wrapper" style="margin-left: 0px;">
+        <section class="content">
+          <div class="row">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="box box-info">
+                <div class="box-header with-border">
+                  <h3 class="box-title">【{{ region }}】站点列表</h3>
+                  <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                    <button class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                  </div>
+                </div>
+                <div class="box-body">
+                  <div class="table-responsive">
+                    <table class="table no-margin">
+                      <tbody>
+                      {% for kpi_site in kpi_list %}
+                        {% if loop.first %}
+                        <tr>
+                        {% endif %}
+                          <td>{{ kpi_site }}</td>
+                        {% if loop.last %}
+                        </tr>
+                        {% else %}
+                            {% if loop.index % cols == 0 %}
+                                </tr><tr>
+                            {% endif %}
+                        {% endif %}
+                      {% endfor %}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="box box-success">
+                <div class="box-header with-border">
+                  <h3 class="box-title">【{{ region }}】查询详情</h3>
+                  <div class="box-tools pull-right">
+                    <button class="btn btn-box-tool" data-widget="collapse"><i class="fa fa-minus"></i></button>
+                    <button class="btn btn-box-tool" data-widget="remove"><i class="fa fa-times"></i></button>
+                  </div>
+                </div>
+                <div class="box-body no-padding">
+                  <div class="row">
+                    <div class="col-md-9 col-sm-8">
+                      <div class="pad">
+
+                        <div id="world-map-markers" style="min-height: 325px;">
+                            {% if num == 0 %}
+                                没有站点数据异常!
+                            {% endif %}
+                            {{ content }}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+    <script src="/static/admin_lte/plugins/jQuery/jQuery-2.1.4.min.js"></script>
+    <script src="/static/admin_lte/bootstrap/js/bootstrap.min.js"></script>
+  </body>
+</html>

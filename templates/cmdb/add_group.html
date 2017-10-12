@@ -1,0 +1,260 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'js/multiselect/prettify.css' %}">
+    <style>
+        div.form-group{ overflow: hidden; }
+        #searchclear {
+            position: absolute;
+            right: 5px;
+            top: 0;
+            bottom: 0;
+            height: 14px;
+            margin: auto;
+            font-size: 14px;
+            cursor: pointer;
+            color: #ccc;
+            z-index: 100;
+        }
+    </style>
+{% endblock %}
+{% block body %}
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper">
+            <!-- Content Header (Page header) -->
+            <section class="content-header">
+                <h1>
+                    添加主机组
+                </h1>
+                <ol class="breadcrumb">
+                    <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                    <li><a href="{% url 'server:index' %}"><i class="fa fa-dashboard"></i> 主机列表</a></li>
+                    <li><a href="{% url 'server:group' %}"><i class="fa fa-dashboard"></i> 主机组列表</a></li>
+                    <li class="active">添加主机组</li>
+                </ol>
+            </section>
+
+            <!-- Main content -->
+            <section class="content">
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="box">
+                            <div class="box-header">
+
+
+                            </div><!-- /.box-header -->
+                            <div class="box-body table-responsive">
+                                <form id="add_group" action="{% if not group %}{% url 'server:add_group' %}{% else %}{% url 'server:update_group' gid=group.id %}{% endif %}" method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="id" value="{{ group.id }}">
+                                    <div class="form-group">
+                                        <label for="id_name" class="col-sm-2 control-label">主机组名称</label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="id_name" name="name" placeholder="主机组名称" required value="{{ group.name }}">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-sm-2">
+                                            <label for="filter_server" class="control-label">添加主机</label>
+                                            <div class="btn-group">
+                                                <input id="filter_server" type="text"  placeholder="过滤主机">
+                                                <span id="searchclear" class="glyphicon glyphicon-remove-circle"></span>
+                                            </div>
+                                        </div>
+                                        {% comment %}
+                                            <input id="filter_server" type="text" placeholder="过滤主机">
+                                        </label>{% endcomment %}
+
+                                        <div class="col-sm-4">
+
+                                            <select name="from" id="multiselect" class="form-control" size="8" multiple="multiple">
+                                                {% for server in server_infos %}
+                                                    {% if not group or server not in group.serverinfo_set.all %}
+                                                    <option value="{{ server.id }}" title="{{ server.RegionId }} - {{ server.InstanceName }} - {{ server.InnerIpAddress }}">{{ server.RegionId }} - {{ server.InstanceName }} - {{ server.InnerIpAddress }}</option>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-sm-2">
+                                            <button type="button" id="multiselect_rightAll" class="btn btn-block"><i class="glyphicon glyphicon-forward"></i></button>
+                                            <button type="button" id="multiselect_rightSelected" class="btn btn-block"><i class="glyphicon glyphicon-chevron-right"></i></button>
+                                            <button type="button" id="multiselect_leftSelected" class="btn btn-block"><i class="glyphicon glyphicon-chevron-left"></i></button>
+                                            <button type="button" id="multiselect_leftAll" class="btn btn-block"><i class="glyphicon glyphicon-backward"></i></button>
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <select name="to" id="multiselect_to" class="form-control" size="8" multiple="multiple">
+                                                {% for server in group.serverinfo_set.all %}
+                                                <option value="{{ server.id }}" title="{{ server.RegionId }} - {{ server.InstanceName }} - {{ server.InnerIpAddress }}">{{ server.RegionId }} - {{ server.InstanceName }} - {{ server.InnerIpAddress }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label for="id_remark" class="col-sm-2 control-label">备注</label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="id_remark" name="remark" placeholder="remark" value="{{ group.remark }}">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-sm-10 col-sm-offset-2">
+                                            <button class="btn btn-primary">{% if not group %}添加{% else %}更新{% endif %}主机组</button>
+                                        </div>
+                                    </div>
+
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section><!-- /.content -->
+        </div><!-- /.content-wrapper -->
+
+
+<div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title" id="myModalLabel">主机连接日志</h4>
+      </div>
+      <div class="modal-body" id="log_content">
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+          <button type="button" class="btn btn-primary" id="connect_again">重新连接</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endblock %}
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js"%}"></script>
+    <script src="{% static "js/multiselect/prettify.min.js"%}"></script>
+    <script src="{% static "js/multiselect/multiselect.min.js"%}"></script>
+
+    <script>
+
+        $(function(){
+            $('#multiselect').multiselect();
+            $("#searchclear").click(function(){
+                $("#filter_server").val('').focus().trigger("keyup");
+            });
+            $("#filter_server").keyup(function(){
+                var $this = $(this);
+                var val = $this.val();
+                if(val){
+                    $("#multiselect").find("option").each(function(){
+                        if($(this).text().indexOf(val) < 0){
+                            $(this).hide();
+                        }else{
+                            $(this).show();
+                        }
+                    })
+                }else{
+                    $("#multiselect").find("option").show();
+                }
+            });
+            var $table = $("#example");
+            var table = $table.DataTable({
+{#                "bFilter": false,//去掉搜索框#}
+                //"bAutoWidth": true, //自适应宽度
+                "sPaginationType" : "full_numbers",
+                "bDestroy" : true,
+                "bProcessing" : true,
+                "iDisplayLength": 10,
+                "sAjaxSource" : "{% url 'server:group_page' %}",
+                "bServerSide" : true,
+                "columns" : [
+                    { "data" : "id"
+                    },  //id
+                    { "data" : "name"},
+                    { "data" : "count" },
+                    { "data" : "remark" },
+                    { "data" : "id"}
+                ],
+                "columnDefs": [
+                    {
+                        "orderable": false,
+{#                        "className": 'select-checkbox',#}
+                        "targets":   0,
+                        "render": function(data, type, row, meta){
+                            return '<input type="checkbox" name="selected_server" value="'+data+'">';
+                        }
+                    },{
+                        "targets":   1,
+                        "render": function(data, type, row, meta){
+                            return '<a href="javascript:void(0);" >'+data+'</a>';
+                        }
+                    },{
+                        "targets":   -1,
+                        "render": function(data, type, row, meta){
+                            return '<button class="btn btn-default grp-edit" type="button">编辑</button>' +
+                                    '<button class="btn btn-default grp-delete" type="button">删除</button>';
+                        }
+                    }
+                ],
+                "order": [[ 1, 'asc' ]],
+
+                "oLanguage" : {
+                    "sSearch": "搜索：",
+                    "sProcessing" : "正在加载中......",
+                    "sLengthMenu" : "每页显示 _MENU_ 条记录",
+                    "sZeroRecords" : "没有数据！",
+                    "sEmptyTable" : "表中无数据存在！",
+                    "sInfo" : "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录",
+                    "sInfoEmpty" : "显示0到0条记录",
+                    "sInfoFiltered" : "数据表中共为 _MAX_ 条记录",
+                    //"sSearch" : "搜索",
+                    "oPaginate" : {
+                        "sFirst" : "首页",
+                        "sPrevious" : "上一页",
+                        "sNext" : "下一页",
+                        "sLast" : "末页"
+                    }
+                }
+            });
+            // 选中操作
+            table.on( 'click', 'tr[role="row"]', function () {
+                $(this).toggleClass('selected');
+                $(this).find("td:first").find("input[name='selected_server']").prop('checked', $(this).hasClass("selected"));
+                var select_all = true;
+                $table.find("input[name='selected_server']").each(function(){
+                    if(!$(this).prop("checked")){
+                        select_all = false;
+                        return false;
+                    }
+                });
+                $table.find("input[name='check_all']").prop('checked', select_all);
+            } );
+            $table.find("input[name='check_all']").click(function(){
+                // 判断是否已经存在选中
+                var have_select = false;
+                $table.find("input[name='selected_server']").each(function(){
+                    if($(this).prop("checked")){
+                        have_select = true;
+                        return false;
+                    }
+                });
+                if(have_select){
+                    $table.find("input[name='selected_server']:checked").prop('checked', false).parents("tr").removeClass("selected");
+                }else{
+                    $table.find("input[name='selected_server']:not(:checked)").prop('checked', true).parents("tr").addClass("selected");
+                }
+            });
+
+
+            var $myModal = $("#myModal");
+            var $connect_again = $("#connect_again");
+
+            $("#add_group").submit(function(){
+                $("#multiselect_to").find("option").prop("selected", true);
+            })
+
+        })
+    </script>
+{% endblock %}

@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% block title %}配置管理系统_V1.0.0{% endblock %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'codemirror/theme/abcdef.css' %}">
+    <link rel="stylesheet" href="{% static 'codemirror/codemirror.css' %}">
+    <style>
+    .large .modal-dialog {
+        width: 60%; /* respsonsive width */
+    }
+    </style>
+{% endblock %}
+
+
+{% block body %}
+
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                快速脚本执行
+                {#                    <small>控制面板</small>#}
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li><a href="{% url 'server:index' %}"><i class="fa fa-server"></i> 作业执行</a></li>
+                <li class="active">快速执行脚本</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        {% comment %}<div class="box-header">
+                                <h3 class="box-title">Server</h3>
+                                <button type="button" id="button">点击获取</button>
+
+                            </div>{% endcomment %}<!-- /.box-header -->
+                        <div class="box-body">
+                            {#                                {% if message and message.result == False %}#}
+                            {#                                <div class="alert alert-danger"><strong>添加失败：</strong>{{ message.message }}</div>#}
+                            {#                                {% endif %}#}
+                            <form id="operating_form" class="form-horizontal" role="form" action="javascript:void(0);" method="post" enctype="multipart/form-data">
+                                <input id="id_id" name="id" type="hidden" value=""/>
+                                <input name="operating_id" type="hidden" value=""/>
+                                <input name="type" type="hidden" value=""/>
+                                {% csrf_token %}
+{#                                <div class="form-group">#}
+{#                                    <label for="id_script_name" class="col-sm-2 control-label">脚本名称 </label>#}
+{##}
+{#                                    <div class="col-sm-7">#}
+{#                                        <input type="text" class="form-control" id="id_script_name" name="name"#}
+{#                                               value="{{ name }}" required value="">#}
+{##}
+{#                                    </div>#}
+{#                                </div>#}
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">执行账户</label>
+
+                                    <div class="col-sm-7">
+                                        <select class="form-control" id="user" name="user">
+                                            <option value="root">root</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_remote_host" class="col-sm-2 control-label">目标主机</label>
+
+                                    <div class="col-sm-7">
+                                        <!-- 按钮触发模态框 -->
+                                        <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
+                                                data-target="#myModal" id="id-btn-srv">选择服务器
+                                        </button>
+                                        <div id="selected_server_list">
+                                            <table id="selected_server_table" class="table table-bordered table-hover">
+                                                <thead>
+                                                <tr class="success">
+                                                    <th>主机名</th>
+                                                    <th>内网IP</th>
+                                                    <th>外网IP</th>
+                                                    <th>操作</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                {% for srv in servers %}
+                                                <tr>
+                                                    <td>{{ srv.InstanceName }}<input type="hidden" name="server" value="{{ srv.id }}"></td>
+                                                    <td>{{ srv.InnerIpAddress }}</td>
+                                                    <td>{{ srv.PublicIpAddress }}</td>
+                                                    <td><button type="button" class="btn btn-default delete_file">删除</button></td>
+                                                </tr>
+                                                {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_source" class="col-sm-2 control-label"></label>
+
+                                    <div class="col-sm-7">
+                                        <!--选中主机之前，开始隐藏表格-->
+                                        <table class="table table-bordered table-hover" id="show_server"
+                                               style="display : none;" name="name_show_server">
+                                            <thead id="add_server_thead">
+                                            <tr class="success">
+                                                <th>Server ID</th>
+                                                <th>主机名</th>
+                                                <th>内网IP</th>
+                                                <th>外网IP</th>
+                                                <th>连接状态</th>
+                                                <th>操作</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            <!--插入选中主机-->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_source" class="col-sm-2 control-label">脚本来源</label>
+
+                                    <div class="col-sm-7">
+                                        <label class="raido-inline">
+                                            <input type="radio" value="1" name="radioform" checked="checked">手工录入</label>
+                                        &nbsp;&nbsp;
+                                        <label class="raido-inline">
+                                            <input type="radio" value="2" name="radioform">本地脚本</label>
+
+                                    </div>
+                                </div>
+
+
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label"></label>
+
+                                    <div class="col-sm-7">
+                                        <div class="well well-lg" id="id_well" style="display : none;">
+
+                                            <div class="btn btn-primary">
+                                                <input id="local_file" name="local_file" type="file" class="upload" onchange="upload(this)"/>
+                                            </div>
+                                            暂时只支持 .sh 后缀脚本
+                                        </div>
+
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_content" class="col-sm-2 control-label">脚本内容</label>
+
+                                    <div class="col-sm-10" id="textarea_div">
+                                        <!--codemirror start-->
+
+                                        <textarea id="id_editor" name="script_content">{% if commands_from_mysql %}{{ commands_from_mysql }}{% else %}#!/bin/bash
+{% endif %}</textarea>
+
+                                        <!--codemirror end-->
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_parameter" class="col-sm-2 control-label">脚本参数</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_script_parameter"
+                                               name="script_args" placeholder="默认为空">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+{#                                    <label for="id_timeout" class="col-sm-2 control-label">脚本运行目录</label>#}
+{##}
+{#                                    <div class="col-sm-10">#}
+{#                                        <input type="text" class="form-control" id="id_path" name="run_path"#}
+{#                                               placeholder="如：/tmp">#}
+{#                                    </div>#}
+                                    <div class="col-sm-offset-2 col-sm-10">
+                                        <button type="button" class="btn btn-primary" id="submit-btn">执行脚本</button>
+                                        &nbsp;&nbsp;
+{#                                        <button type="button" class="btn btn-success" id="submit-btn2" onclick="goBottom();">点击跳转到脚本执行结果处</button>#}
+                                    </div>
+                                </div>
+
+                                <a id="anchor_scroll" href="#id_well" style="display:none">点击这里本页跳转</a>
+
+
+                                <div class="form-group">
+                                    <div class="col-sm-offset-2 col-sm-10" id="id_script_run_result">
+{#                                    <div class="col-sm-offset-2 col-sm-10" id="id_script_run_result" style="display: none">#}
+                                        <div class="well" id="well-status" role="alert" style="display:none">脚本正在执行中。。。</div>
+                                    </div>
+
+                                </div>
+
+
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+    <div class="modal fade large" id="myModal" tabindex="-1" role="dialog"
+     aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close"
+                        data-dismiss="modal" aria-hidden="true">
+                    &times;
+                </button>
+                <h4 class="modal-title" id="myModalLabel">
+                    <strong>请选择目标服务器</strong>
+                </h4>
+            </div>
+            <div class="modal-body">
+
+                <table id="server_table" class="display table table-bordered table-hover dataTable" cellspacing="0" width="100%">
+                    <thead>
+                    <tr>
+                        <th></th>
+                        <th>主机名</th>
+                        <th>内网IP</th>
+                        <th>外网IP</th>
+                        <th>配置</th>
+                    </tr>
+                    </thead>
+                    <tbody></tbody>
+
+                </table>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default"
+                        data-dismiss="modal">取消
+                </button>
+                <button type="button" class="btn btn-primary"
+                        id="add_server_btn">添加
+                </button>
+            </div>
+        </div>
+        <!-- /.modal-content -->
+    </div>
+    <!-- /.modal -->
+
+</div>
+{% endblock %}
+{% block script %}
+    <script src="{% static 'codemirror/codemirror.js' %}"></script>
+    <script src="{% static 'codemirror/mode/shell/shell.js' %}"></script>  <!--语法高亮-->
+
+
+    <script>
+
+        //设置textarea高亮
+        var textarea = document.getElementById('id_editor');
+        var myTextarea = document.getElementById('id_editor');
+        var CodeMirrorEditor = CodeMirror.fromTextArea(myTextarea, {
+            mode: "text/x-sh",  //设置语法高亮
+            lineNumbers: true,       //显示行号
+            tabSize: 4,             //tab缩进为4
+            smartIndent: true,      //是否智能缩进
+            height: "750px",
+            matchBrackets: true,
+            styleActiveLine: true,
+            lineWrapping: true, //是否强制换行
+            theme: "abcdef",  //样式
+            scrollbarStyle: "native", //
+            lineWiseCopyCut: true,  //启用时，如果在复制或剪切时没有选择文本，那么就会自动操作光标所在的整行
+            cursorHeight: "0.85"  //光标高度。默认为1，也就是撑满行高。对一些字体，设置0.85看起来会更好。
+
+        });
+
+        // 获取上传文件内容，把内容展示到textarea中
+        function upload(input) {
+            //支持chrome IE10
+            if (window.FileReader) {
+                var file = input.files[0];
+                filename = file.name.split(".")[0];
+                var reader = new FileReader();
+                reader.onload = function () {
+                    console.log(this.result)  //this.result值为本地文件内容
+                    CodeMirrorEditor.setValue(this.result);  //把本地文件内容放到codemirror中去
+                }
+                reader.readAsText(file);
+            }
+        }
+
+
+
+        var url_server_list = "{% url 'server:job_list_page' %}";
+        var url_file_upload = '{% url 'operating:fileupload' %}';
+        var url_filetransfer_submit = '{% url 'operating:filetransfer' %}';
+        $(function () {
+            var $server_table = $("#server_table");
+            var server_table = $server_table.DataTable({
+                // "bFilter": false,//去掉搜索框
+                //"bAutoWidth": true, //自适应宽度
+                "sPaginationType" : "full_numbers",
+                //"sAjaxDataProp" : "aData",
+                "bDestroy" : true,
+                "bProcessing" : true,
+                "iDisplayLength": 10,
+                "sAjaxSource" : url_server_list,
+                "bServerSide" : true,
+                "columns" : [
+                    { 'data': 'id'},
+                    { "data" : "InstanceName",
+                        "render": function(data, type, row, meta) {
+                            return data + '<input type="hidden" name="server" value="'+row.id+'">';
+                        }
+                    },
+                    { "data" : "InnerIpAddress" },
+                    { "data" : "PublicIpAddress" },
+                    { "data" : "Cpu",
+                        "render": function (data, type, row, meta) {
+                            var cpu = data;
+                            var tmp = (row.Memory / 1024.0).toFixed(1);
+                            var memory = (parseInt(tmp) == tmp ? parseInt(tmp) : tmp);
+                            var type_flag = '';
+                            var title_flag = '';
+                            if(row.DiskType == 'SSD' || row.DiskType == 'EFFICIENCY'){
+                                type_flag = row.DiskType[0];
+                                title_flag = 'SSD';
+                                if(row.DiskType == 'EFFICIENCY'){
+                                    title_flag = '混合硬盘';
+                                }
+                            }
+                            var disk = row.DiskSize + type_flag;
+                            var title = 'CPU核心数: ' + cpu + '\n内存: ' + memory
+                                    + ' GB\n硬盘: ' + row.DiskSize + ' GB' + (title_flag ? "(" + title_flag + ")":"");
+                            return '<span title="' + title + '">' + cpu + ' / ' + memory + ' / ' + disk + '</span>';
+                        }
+                    }
+                ],
+                "columnDefs": [
+                    {
+                        "searchable": false,
+                        "orderable": false,
+                        "targets":0
+                         // "visible": false,
+                    }
+                ],
+                "order": [[ 2, 'asc' ]],
+
+                "oLanguage" : {
+                    "sProcessing" : "正在加载中......",
+                    "sLengthMenu" : "每页显示 _MENU_ 条记录",
+                    "sZeroRecords" : "没有数据！",
+                    "sEmptyTable" : "表中无数据存在！",
+                    "sInfo" : "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录",
+                    "sInfoEmpty" : "显示0到0条记录",
+                    "sInfoFiltered" : "数据表中共为 _MAX_ 条记录",
+                    //"sSearch" : "搜索",
+                    "oPaginate" : {
+                        "sFirst" : "首页",
+                        "sPrevious" : "上一页",
+                        "sNext" : "下一页",
+                        "sLast" : "末页"
+                    }
+                }
+            });
+
+            server_table.on('click', 'tr[role="row"]', function(){
+                $(this).toggleClass('selected');
+            });
+            // 添加序号
+            server_table.on('order.dt search.dt', function(){
+                server_table.column(0, {search:'applied', order:'applied'}).nodes().each(function(cell, i) {
+                    cell.innerHTML = i+1;
+                });
+            }).draw();
+
+            $("#select_server").click(function(){
+                $myModal.find("input:checkbox:checked").prop("checked" , false);
+                $myModal.modal("show");
+            });
+
+            var $selected_server_table = $("#selected_server_table");
+            $("#add_server_btn").click(function(){
+
+                if($server_table.children("tbody").find("tr.selected").size() > 0) {
+                    var old_selected_id = [];
+                    $selected_server_table.find("input[name='server_ids']").each(function(i, v){
+                        old_selected_id.push($(this).val());
+                    });
+
+                    var table = '';
+                    $server_table.children("tbody").find("tr.selected").each(function (i, v) {
+                        var $tr = $(this);
+                        var id = $tr.children("td:eq(1)").children("input[type='hidden']").val()
+                        if(old_selected_id.indexOf(id) < 0){
+                            table += '<tr><td>' + $tr.children("td:eq(1)").html() + '</td>';
+                            table += '<td>' + $tr.children("td:eq(2)").html() + '</td>';
+                            table += '<td>' + $tr.children("td:eq(3)").html() + '</td>';
+                            table += '<td><button type="button" class="btn btn-default delete_file">删除</button></td></tr>';
+                        }
+                    });
+                    $("#selected_server_table").find("tbody").append(table);
+                }
+                $("#myModal").modal("hide").find("tr.selected").removeClass("selected");
+            });
+
+            // 删除按钮
+            $selected_server_table.on("click", ".delete_file", function(){
+                $(this).parents("tr").remove();
+            });
+
+            // 执行脚本按钮,含有规避功能，如果输入的脚本内容含有“rm -rf /”,则弹框提示；反之则执行
+            $("#submit-btn").click(function () {
+                console.log(CodeMirrorEditor.getValue())
+                // test方法,测试字符串,符合模式时返回true,否则返回false
+                var re = /rm -rf \/$/;  // 匹配"rm -rf /"命令
+                // alert(re.test(str)); // true
+                if (re.test(CodeMirrorEditor.getValue())) {
+                    alert('您输入的命令含有"rm -rf /"字符，该命令被禁止使用，请务必核对正确再执行!！');
+                }
+                else {
+                    var li_server = [];
+                    $('#selected_server_table').find('input[name="server"]').each(function () {
+                        li_server.push($(this).val());  //把变量加入列表中
+                    });
+                    //console.log(li_server)
+                    $('#well-status').show();  //去掉隐藏的div，提示脚本正在执行
+                    simple_ajax({
+                        url: "{% url 'operating:index' %}",
+                        data: {  //这里的data是传递到后端views中的数据
+                            //"name": $("#id_script_name").val(),
+                            "user": $("#user").val(),                        // 获取脚本执行用户
+                            "script_content": CodeMirrorEditor.getValue(),   // 获取脚本内容
+                            "server": li_server.join(','),                   // 获取选择的server id
+                            "script_args": $('#id_script_parameter').val(),  // 获取脚本参数
+                            "radioform": $('[name="radioform"]').val()       // 获取单选按钮的值
+                        },
+                        success: function (data) {  //这里的data是从views中获取到的json返回值
+                            if (data.result == true) {
+                                $("#id_script_run_result").html(draw_script_result('123', data.message));
+                            }
+                            else {
+                                $("#id_script_run_result").html('<div class="well" id="well-status" role="alert">表单验证失败，您有漏填项！请确认填写完全!' + data.message + '</div>');
+                            }
+                        }
+
+                    })
+                }
+            });
+        });
+
+        //构造摸态框中添加按钮增加服务器到页面功能
+
+        //单选按钮隐藏/显示div
+        $(":radio[name='radioform']").click(function () {
+            var index = $(":radio[name='radioform']").index($(this));
+            if (index == 1) {
+                $("#id_well").show();
+            }else {
+                $("#id_well").hide();  //当被选中的不是第2个时，div隐藏
+            }
+
+        });
+
+        //点击删除按钮，删除当前行
+        function deltr(nowTr){
+            $(nowTr).parent().parent().remove();
+        }
+
+        //点击按钮，页面滚动到页面底部
+        function goBottom() {
+            window.scrollTo(0, document.documentElement.scrollHeight-document.documentElement.clientHeight);
+        }
+        //处理脚本运行结果
+        function draw_script_result(id, result){
+            result = $.parseJSON(result);
+            var parent_id = 'accordion_'+id;
+            var html = '<div class="panel-group" id="'+parent_id+'" role="tablist" aria-multiselectable="true">';
+            $.each(result, function(ip, v){
+                var _ip = id + '_' + ip.replace(/\./g, '_');
+                if('dark' in v){
+                    v.message = v.dark.message;
+                    v.result = v.dark.result;
+                }
+                var message = v.message.replace(/\r\n/g, '<br>');
+                if(!message){
+                    message = '没有输出。'
+                }
+                html += '<div class="panel panel-default">'
+                      +'  <div class="panel-heading" role="tab" id="headingOne_'+_ip+'">'
+                      +'    <h4 class="panel-title">'
+                      +'      <a  class="collapsed" role="button" data-toggle="collapse" data-parent="#'+parent_id+'" href="#collapseOne_'+_ip+'" aria-expanded="false" aria-controls="collapseOne">'
+                      +ip + '&nbsp;&nbsp;&nbsp;'
+                      + (v.result == true? '执行完成！(点击显示详细执行结果)':'执行出错！')
+                      +'      </a>'
+                      +'    </h4>'
+                      +'  </div>'
+                      +'  <div id="collapseOne_'+_ip+'" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne_'+_ip+'">'
+                      +'    <div class="panel-body">'
+                      + message
+                      +'    </div>'
+                      +'  </div>'
+                      +'</div>';
+            });
+            html += "</div>";
+            return html;
+        }
+
+
+
+{#    //选择服务器验证#}
+{#    $('#id-btn-srv').blur(function(){#}
+{##}
+{#    });#}
+
+    </script>
+{% endblock %}

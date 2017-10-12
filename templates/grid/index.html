@@ -1,0 +1,478 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% block title %}配置管理系统_V1.0.0{% endblock %}
+{% block css %}
+    {#    <link rel="stylesheet" href="{% static "admin_lte/plugins/datatables/jquery.dataTables.min.css" %}">#}
+    <link rel="stylesheet" href="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.css" %}">
+{#    <link rel="stylesheet" href="{% static "js/element-index.css" %}">#}
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-default/index.css">
+    <style type="text/css">
+        table.dataTable tbody tr.selected {
+            background-color: #B0BED9;
+        }
+        table.dataTable.row-border tbody th, table.dataTable.row-border tbody td, table.dataTable.display tbody th, table.dataTable.display tbody td {
+            border-top: 1px solid #ddd;
+            line-height: 35px;
+        }
+    #new_grid_section input[type='text']{
+        width:300px; font-family: Consolas;
+    }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                新建Grid服务器
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li class="active">新建Grid服务器</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        {% verbatim %}
+        <section class="content" id="new_grid_section">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-body table-responsive">
+
+                            <el-form ref="form"  label-width="80px">
+                                <el-form-item label="区域">
+                                    <el-radio-group v-model="region">
+                                        <el-radio-button label="cn-beijing-6">北京6区</el-radio-button>
+                                        <el-radio-button label="cn-shanghai-2">上海2区</el-radio-button>
+                                    </el-radio-group>
+                                </el-form-item>
+                                <el-form-item label="选择VPC">
+                                    <el-select v-model="vpc" placeholder="请选择">
+                                        <el-option
+                                                v-for="item in current_vpcs"
+                                                :key="item.VpcId"
+                                                :label="item.VpcName + ' - ' + item.CidrBlock"
+                                                :value="item.VpcId">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                 <el-form-item label="选择子网">
+                                    <el-select v-model="subnet" placeholder="请选择">
+                                        <el-option
+                                                v-for="item in current_subnets"
+                                                :key="item.SubnetId"
+                                                :label="item.SubnetName + ' - ' + item.CidrBlock"
+                                                :value="item.SubnetId">
+                                        </el-option>
+                                    </el-select>
+                                </el-form-item>
+                                <el-form-item label="8C 16G 500G">
+                                     <el-slider
+                                          v-model="I18B"
+                                          :step="1"
+                                          :min="0"
+                                          :max="12"
+                                          show-stops>
+                                     </el-slider>
+                                    <template v-for="item in hostnames_I18B">
+                                        <el-input placeholder="请输入内容" :value="item" style=""></el-input>
+                                        <br>
+                                    </template>
+                                </el-form-item>
+                                <el-form-item label="8C 16G 200G">
+                                     <el-slider
+                                          v-model="I18A"
+                                          :step="1"
+                                          :min="0"
+                                          :max="12"
+                                          show-stops>
+                                     </el-slider>
+                                    <template v-for="item in hostnames_I18A">
+                                        <el-input placeholder="请输入内容" :value="item" style="width:300px;"></el-input>
+                                        <br>
+                                    </template>
+                                </el-form-item>
+                                <el-form-item label="4C 8G 200G">
+                                     <el-slider
+                                          v-model="I14B"
+                                          :step="1"
+                                          :min="0"
+                                          :max="12"
+                                          show-stops>
+                                     </el-slider>
+                                    <template v-for="item in hostnames_I14B">
+                                        <el-input placeholder="请输入内容" :value="item" style="width:300px;"></el-input>
+                                        <br>
+                                    </template>
+                                </el-form-item>
+                                <el-form-item label="4C 16G 200G">
+                                     <el-slider
+                                          v-model="I14C"
+                                          :step="1"
+                                          :min="0"
+                                          :max="12"
+                                          show-stops>
+                                     </el-slider>
+                                    <template v-for="item in hostnames_I14C">
+                                        <el-input placeholder="请输入主机名" :value="item" style="width:300px;"></el-input>
+                                        <br>
+                                    </template>
+                                </el-form-item>
+
+                                <el-form-item label-width="80px">
+                                    <el-button type="primary" @click="onSubmit" :disabled="create_disable">立即创建</el-button>
+                                    <el-button>取消</el-button>
+                                    <el-button @click="retry_init" :disabled="retry_disable">重试连接</el-button>
+                                </el-form-item>
+                            </el-form>
+                            <hr>
+                            <h4>{{ status }}</h4>
+                             <el-table
+                                :data="ecs_list"
+                                stripe
+                                style="width: 100%">
+                                <el-table-column
+                                  prop="InstanceId"
+                                  label="实例ID"
+                                  width="280">
+                                </el-table-column>
+                                <el-table-column
+                                  prop="InstanceName"
+                                  label="实例名称"
+                                  width="180">
+                                </el-table-column>
+                                <el-table-column
+                                  prop="PrivateIp"
+                                  label="内网IP地址"
+                                  width="150">
+                                </el-table-column>
+                                <el-table-column
+                                  prop="PublicIp"
+                                  label="弹性IP地址"
+                                  width="150">
+                                </el-table-column>
+                                 <el-table-column
+                                  label="初始化结果">
+                                  <template scope="scope" >
+                                      <template v-if="scope.row.init_result && scope.row.init_result.status">
+                                          <el-collapse>
+                                              <el-collapse-item :title="scope.row.init_result.status" name="1">
+                                                <div v-for="line in scope.row.init_result.result.stdout_lines">{{ line }}</div>
+                                              </el-collapse-item>
+                                          </el-collapse>
+                                      </template>
+                                      <template v-else>
+                                          初始化中。。。
+                                      </template>
+
+                                  </template>
+                                </el-table-column>
+                              </el-table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>{% endverbatim %}
+    </div><!-- /.content-wrapper -->
+{% endblock %}
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js"%}"></script>
+    <script src="{% static "js/vue.js"%}"></script>
+{#    <script src="{% static "js/element-index.js"%}"></script>#}
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+{#    axios.defaults.withCredentials = true#}
+    axios.defaults.xsrfHeaderName = "X-CSRFTOKEN";
+    axios.defaults.xsrfCookieName = "XCSRF-TOKEN";
+    new Vue({
+        el: '#new_grid_section',
+        data: {
+            region: 'cn-beijing-6',
+            vpc: '',
+            subnet: '',
+            I18B: 0,
+            I18A: 0,
+            I14B: 0,
+            I14C: 0,
+
+            vpcs: {
+                'cn-beijing-6': [],
+                'cn-shanghai-2': []
+            },
+            subnets: {
+                'subid...': {}
+            },
+            current_subnets: [],
+            ecs_list: [],
+            ecs_list2: [{'InstanceName':'cn-bj-ksy-v1-grid-01', 'InstanceId': "ljdsf-asdfjwiekjna-efajefiae-eajfnk", "PrivateIp": "1.2.3.4"},
+            {'InstanceName':'cn-bj-ksy-v1-grid-02', 'InstanceId': "ljdsf-asdfjwiekj3242-fajefiae-eajfnk", "PrivateIp": "222.222.333.444","PublicIp": "222.222.333.444", "init_result":{
+                "status":"ok", "result":{"stdout_lines":['klsdfjalfkadls;fj', 'asdfdsafds','adsfdssf']}
+            }}],
+            // 状态提示文字，显示在table上方
+            status: "",
+            create_disable: false,
+            retry_disable: false
+        },
+        mounted: function(){
+
+        },
+        created: function(){
+            var $this = this;
+            axios.get('/grid/vpcs/cn-beijing-6')
+                .then(function(response){
+                    $this.vpcs['cn-beijing-6'] = response.data.VpcSet;
+                }).catch(function(error){
+                console.log(error);
+            });
+            axios.get('/grid/vpcs/cn-shanghai-2')
+                .then(function(response){
+                    $this.vpcs['cn-shanghai-2'] = response.data.VpcSet;
+                }).catch(function(error){
+                console.log(error);
+            });
+        },
+        computed: {
+            current_vpcs: function(){
+                // 当前区域的vpc列表
+                return this.vpcs[this.region]
+            },
+            hostname_prefix: function(){
+                // 主机名前缀，如：sh-ksy-v5-
+                var reg = '';
+                if(this.region === 'cn-beijing-6'){
+                    reg = 'bj';
+                }else if(this.region === 'cn-shanghai-2'){
+                    reg = 'sh';
+                }
+                var prefix_subnet = '';
+                for(var i in this.current_subnets){
+                    if(this.current_subnets[i].SubnetId === this.subnet){
+                        var name = this.current_subnets[i].SubnetName;
+                        prefix_subnet = name.indexOf('_') > 0 ? name.split('_')[0] : '';
+                        break
+                    }
+                }
+                return (reg?reg:'选择区域') + "-ksy-" + (prefix_subnet?prefix_subnet:'选择子网') + "-"
+            },
+            hostnames_I18B: function(){
+                // 8C 16G 500GB
+                var hosts = [];
+                for(var i = 0; i < this.I18B; i++){
+                    var tmp = '';
+                    if(i === 0){
+                        tmp = 'kf_master-01';
+                    }else if(i < 10){
+                        tmp = 'kf_slave-0' + i;
+                    }else{
+                        tmp = 'kf_slave-' + i;
+                    }
+                    hosts.push(this.hostname_prefix + tmp);
+                }
+                return hosts
+            },
+            hostnames_I18A: function(){
+                // 8C 16G 200GB
+                var hosts = [];
+                for(var i = 1; i <= this.I18A; i++){
+                    hosts.push(this.hostname_prefix + (i < 10 ? 'java-0': 'java-') + i);
+                }
+                return hosts
+            },
+            hostnames_I14B: function(){
+                // 4C 8G 200GB
+                var diy_sort = function(o1, o2){
+                    // 自定义排序，按t2d-01 t2d-02 tchat-01 web-01方式排序
+                    var v1,v2;
+                    if(o1.indexOf('t2d')>=0){
+                        v1 = 10;
+                    }else if(o1.indexOf('tchat')>=0){
+                        v1 = 20;
+                    }else{
+                        v1 = 30;
+                    }
+                    if(o2.indexOf('t2d')>=0){
+                        v2 = 10;
+                    }else if(o2.indexOf('tchat')>=0){
+                        v2 = 20;
+                    }else{
+                        v2 = 30;
+                    }
+                    v1 += parseInt(o1.substr(o1.length-2));
+                    v2 += parseInt(o2.substr(o2.length-2));
+                    return v1 - v2
+
+                };
+                var types = ['t2d', 'tchat'/*, 'web'*/];
+                var hosts = [];
+                for(var i = 0; i < this.I14B; i++){
+                    var index = i % types.length;
+                    var num = parseInt(i / types.length) + 1;
+                    hosts.push(this.hostname_prefix + types[index] + '-' + (num < 10 ? '0': '') + num);
+                }
+                return hosts.sort(diy_sort)
+            },
+            hostnames_I14C: function() {
+                // 4C 16G 200GB
+                var hosts = [];
+                for(var i = 1; i <= this.I14C; i++){
+                    hosts.push(this.hostname_prefix + (i < 10 ? 'web-0': 'web-') + i);
+                }
+                return hosts
+            }
+        },
+        watch: {
+            region: function(data){
+                this.vpc = ""
+            },
+            vpc: function(new_vpc){
+                var $this = this;
+                $this.subnet = '';
+                if(new_vpc){
+                    if(new_vpc in this.subnets){
+                        $this.current_subnets = $this.subnets[new_vpc];
+                    }else{
+                        axios.get('/grid/subnets/' + $this.region + '/' + new_vpc)
+                        .then(function (response) {
+                            $this.subnets[new_vpc] = response.data['SubnetSet'];
+                            $this.current_subnets = response.data['SubnetSet'];
+                        })
+                        .catch(function (error) {
+                            console.log(error);
+                        });
+                    }
+                }else{
+                    $this.current_subnets = [];
+                }
+            }
+        },
+
+        methods:{
+            retry_init: function(){
+                if(this.ecs_list.length == 0){
+                    console.log("ECS列表为空，请先创建~");
+                    this.$message({ message: "请先创建ECS服务器！", type: 'warning' });
+                    return;
+                }
+                console.log("正在重试初始化");
+                var $this = this;
+                axios.post('/grid/retry/', $this.ecs_list)
+                    .then(function(response){
+                        console.log(response.data);
+                        if(response.data.result){
+                            $this.fetch_task_result(response.data.task_id);
+                        }
+                    }).catch(function(error){
+                        console.log(error);
+                })
+            },
+            fetch_task_result: function(task_id){
+                console.log("正在初始化。。。");
+                var $this = this;
+                this.status = 'ECS创建成功！正在初始化。。。';
+                var loop_time = setInterval(function(){
+                    axios.get('/grid/task/' + task_id)
+                        .then(function (response) {
+                            console.log(response.data);
+                            if(!response.data.result){
+                                console.log("未找到任务：" + created_data.task_id);
+                                $this.status = "未找到任务：" + created_data.task_id;
+                            }else{
+                                if(response.data.status == 'PENDING'){
+                                    console.log("正在初始化ECS云服务...")
+                                }else if(response.data.status == 'SUCCESS'){
+                                    console.log("ECS初始化完毕！")
+                                    $this.status = 'ECS初始化完毕！请使用8022端口连接进行后续操作！';
+                                    $this.ecs_list = response.data.message;
+                                    console.log(response.data.message);
+                                    clearTimeout(loop_time)
+                                }
+                            }
+                        }).catch(function (error) {
+                        console.log(error)
+                    })
+                }, 3000);
+            },
+            onSubmit: function(){
+                console.log("提交中。。。");
+                var $this = this;
+                var data = {
+                    region: $this.region,
+                    vpc: $this.vpc,
+                    subnet: $this.subnet,
+                    hostnames_I18B: $this.hostnames_I18B,
+                    hostnames_I18A: $this.hostnames_I18A,
+                    hostnames_I14B: $this.hostnames_I14B,
+                    hostnames_I14C: $this.hostnames_I14C
+                };
+                if(this.vpc === ''){
+                    $this.$message({ message: '请选择VPC', type: 'warning' });
+                    return;
+                }
+                if(this.subnet === '') {
+                    $this.$message({ message: '请选择子网', type: 'warning' });
+                    return;
+                }
+                if(this.I18B + this.I14B + this.I18A + this.I14C === 0) {
+                    $this.$message({ message: '请添加主机', type: 'warning' });
+                    return;
+                }
+                this.$confirm('您已选择 '+(this.I18B + this.I14B + this.I18A + this.I14C)
+                    +' 台服务器，其中8C-16G-500G ' + this.I18B
+                    + '台 8C-16G-200G ' + this.I18A + "台 4C-8G-200G " + this.I14B + '台 4C-16G-200G ' + this.I14C
+                    + "台。点击确定立即创建！")
+                .then(function(){
+                    console.log("hhhh");
+                    /*simple_ajax({
+                        url: '/grid/newgrid/',
+                        method: 'post',
+                        data: data,
+                        success: function(data){
+                            console.log(data)
+                        }
+                    }); */
+                    $this.status = '正在创建KEC云服务器';
+                    axios.post('/grid/newgrid/', data)
+                        .then(function(response){
+                            console.log(response.data);
+                            var created_data = response.data;
+                            console.log("loop...");
+                            var loop_time = setInterval(function(){
+                                axios.get('/grid/task/' + created_data.task_id)
+                                    .then(function (response) {
+                                        $this.create_disable = true;
+                                        console.log(response.data);
+                                        if(!response.data.result){
+                                            console.log("未找到任务：" + created_data.task_id)
+                                        }else{
+                                            if(response.data.status == 'PENDING'){
+                                                console.log("正在创建ECS云服务...")
+                                            }else if(response.data.status == 'SUCCESS'){
+                                                console.log("ECS创建成功！准备初始化。。。");
+                                                $this.create_disable = false;
+                                                $this.status = 'ECS创建成功！正在初始化。。。';
+                                                clearTimeout(loop_time);
+                                                $this.ecs_list = response.data.message[0];
+                                                $this.fetch_task_result(response.data.message[1])
+                                            }
+                                        }
+                                    }).catch(function (error) {
+                                    console.log(error)
+                                })
+                            }, 3000);
+                        }).catch(function(error){
+                            console.log(error);
+                    })
+                }).catch(function(){});
+            }
+        }
+    })
+    </script>
+{% endblock %}

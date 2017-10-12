@@ -1,0 +1,316 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+
+{% block body %}
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                定时作业
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li><a href="{% url 'operating:cronjobs' %}"><i class="fa fa-server"></i> 定时作业</a></li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-header">
+                            <button type="button" class="btn btn-primary" id="add-cronjob"
+                                    onclick="window.location.href='{% url 'operating:add_cronjobs' %}'">新建定时作业
+                            </button>
+
+
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body table-responsive">
+                            <table id="example" class="display table table-bordered table-hover dataTable"
+                                   cellspacing="0" width="100%">
+                                <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>操作</th>
+                                    <th>当前状态</th>
+                                    <th>定时任务名称</th>
+                                    <th>定时表达式</th>
+                                    <th>创建人</th>
+                                    <th>创建时间</th>
+                                    <th>最后修改人</th>
+                                    <th>最后修改时间</th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">配置文件</h4>
+                </div>
+                <div class="modal-body">
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock %}
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js" %}"></script>
+    <script>
+        function ini_color(content) {
+            var ls = content.split('\n');
+            var sec = /^\[.*?\]/;
+            var key = /^(\w.*?)=(.*)/;
+            var comment = /^[#;].*/;
+            var len = ls.length;
+            for (var i = 0; i < len; i++) {
+                if (comment.exec(ls[i])) {
+                    ls[i] = '<span style="color:#808080;">' + ls[i] + '</span>';
+                } else if (sec.exec(ls[i])) {
+                    ls[i] = '<span style="color:#000080;font-family:consolas;">' + ls[i] + '</span>';
+                } else {
+                    var kv = key.exec(ls[i]);
+                    if (kv) {
+                        ls[i] = '<span style="color:#0000ff;font-family:consolas;">' + kv[1]
+                                + '</span>=<span style="color:#008040;font-family:consolas;">' + kv[2] + '</span>';
+                    }
+                }
+            }
+            return ls.join('<br>');
+        }
+        function format(d) {
+            // `d` is the original data object for the row
+            var null_val = "暂无";
+
+        }
+        $(function () {
+            var $table = $("#example");
+            var table = $table.DataTable({
+                "bFilter": false,//去掉搜索框
+                "bAutoWidth": true, //自适应宽度
+                "sPaginationType": "full_numbers",
+                //"sAjaxDataProp" : "aData",
+                "bDestroy": true,
+                "bProcessing": true,
+                "iDisplayLength": 10,
+                "sAjaxSource": "{% url 'operating:page' %}",
+                "bServerSide": true,
+
+                "columns": [
+                    {'data': null},  // 序号列不绑定数据
+                    {'data': 'id', "bSortable": false}, // 操作列需要id值，且不可排序
+                    {"data": "status"},
+                    {"data": "name"},
+                    {"data": "cron_content"},
+                    {"data": "cron_creater"},
+                    {"data": "create_time"},
+                    {"data": "cron_modified"},
+                    {"data": "update_time"}
+                ],
+                "columnDefs": [
+                    {
+                        "searchable": false,
+                        "orderable": false,
+                        "targets": 0
+                        // "visible": false,
+                    },
+                    {
+                        "targets": 1,//操作
+                        "render": function (data, type, row, meta) {
+                            //渲染 把数据源中的标题和url组成超链接
+                            return "<button class='btn btn-default cron-update' type='button' data-id='" + data + "'><i class='fa fa-edit'></i></button>" +
+                                    "&nbsp;&nbsp;<button class='btn btn-default cron-delete' type='button' data-id='" + data + "'><i class='fa fa-trash-o'></i></button>"
+                        }
+                    },
+
+
+                     // 启动停止服务
+                    {   'data': 'state',
+                        "render": function(data, type, row, meta) {
+                            var cron_stop = "<button class='btn btn-default cron-stop' type='button' data-id='"+row.id+"'><i class='fa fa-stop'></i></button>"+'&nbsp';
+                            var cron_start = "<button class='btn btn-default cron-start' type='button' data-id='"+row.id+"'><i class='fa fa-play'></i></button>"+'&nbsp';
+                            var state_str = '';
+                            switch(data){
+                                case 0:  state_str = cron_start + '已停用'; break;
+                                case 1:  state_str = cron_stop + '已启用';   break;
+                            }
+                            return state_str;
+
+                        },
+                        "targets": 2
+                    },
+
+                ],
+                "order": [[2, 'asc']],
+
+                "oLanguage": {
+                    "sProcessing": "正在加载中......",
+                    "sLengthMenu": "每页显示 _MENU_ 条记录",
+                    "sZeroRecords": "没有数据！",
+                    "sEmptyTable": "表中无数据存在！",
+                    "sInfo": "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录",
+                    "sInfoEmpty": "显示0到0条记录",
+                    "sInfoFiltered": "数据表中共为 _MAX_ 条记录",
+                    "oPaginate": {
+                        "sFirst": "首页",
+                        "sPrevious": "上一页",
+                        "sNext": "下一页",
+                        "sLast": "末页"
+                    }
+                }
+            });
+            // 选中操作
+            table.on('click', 'tr[role="row"]', function () {
+                $(this).toggleClass('selected');
+            });
+            // 添加序号
+            table.on('order.dt search.dt', function () {
+                table.column(0, {search: 'applied', order: 'applied'}).nodes().each(function (cell, i) {
+                    cell.innerHTML = i + 1;
+                });
+            }).draw();
+
+            $table.find("tbody").on('click', 'td.details-control', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+                if (row.child.isShown()) {
+                    // This row is already open - close it
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    // Open this row
+                    row.child(format(row.data())).show();
+                    tr.addClass('shown');
+                }
+            });
+
+            //删除行
+            function batch_delete(cron_id) {
+                simple_ajax({
+                    url: "{% url 'operating:remove_cron_line' %}",
+                    data: {"id": cron_id},
+                    success: function (data) {
+                        if (data.result == true) {
+                            table.ajax.reload()
+                        } else {
+                            alert("删除失败！" + data.message)
+                        }
+                    }
+                })
+            }
+
+{#            $("#batch_delete").click(function () {#}
+{#                // console.log(table.rows('.selected').data())#}
+{#                var datas = table.rows('.selected').data();#}
+{#                var length = datas.length;#}
+{#                if (length > 0 && confirm("您确定要删除这" + length + "个计划任务吗？")) {#}
+{#                    var image_id = [];#}
+{#                    for (i = 0; i < length; i++) {#}
+{#                        image_id.push(datas[i].id);#}
+{#                    }#}
+{#                    batch_delete(image_id)#}
+{#                } else {#}
+{#                    alert('请至少选择一个计划任务');#}
+{#                }#}
+{#            });#}
+            $table.delegate('.cron-delete', 'click', function () {
+                if (confirm("您确定要删除该计划任务吗？")) {
+                    batch_delete([$(this).attr("data-id")]);
+                }
+            });
+            var $modal = $("#myModal");
+
+            $table.delegate(".view_config", 'click', function () {
+                var id = $(this).attr("data-id");
+                if (id) {
+                    simple_ajax({
+                        url: '{% url 'operating:page' %}',
+                        data: {id: id},
+                        success: function (data) {
+                            if (data.result == true) {
+                                $modal.find(".modal-body").html(data.message.replace(/\n/g, '<br>'));
+                                $modal.find(".modal-body").html(ini_color(data.message));
+                                $modal.modal('show');
+                            } else {
+                                alert(data.message);
+                            }
+                        }
+                    })
+                }
+                return false;
+            });
+
+            //搜索
+            {#            $("#search_form").submit(function(){#}
+            {#                var search_query = $(this).serialize();#}
+            {#                table.ajax.url("{% url 'operating:page' %}?" + search_query).load();#}
+            {#            });#}
+
+            //停止计划任务
+            $table.delegate('.cron-stop', 'click', function () {
+                var s_id = $(this).attr("data-id");
+                $(this).parent("td").html("正在停止");
+                simple_ajax({
+                    url: "{% url 'operating:stop_cron' %}",
+                    data: {"id": s_id},
+                    success: function (data) {
+                        if (data.result == false) {
+                            alert(data.message)
+                        }
+                        table.ajax.reload()
+                    }
+                })
+            });
+            //启动计划任务
+            $table.delegate('.cron-start', 'click', function () {
+                var s_id = $(this).attr("data-id");
+                $(this).parent("td").html("正在启动");
+                simple_ajax({
+                    url: "{% url 'operating:start_cron' %}",
+                    data: {"id": s_id},
+                    success: function (data) {
+                        if (data.result == false) {
+                            alert(data.message)
+                        }
+                        table.ajax.reload()
+                    }
+                })
+            });
+
+
+            $table.delegate('.cron-update', 'click', function(){
+                var datas = $(this).attr("data-id")
+                var re_data = datas.replace(/-/g,'')  //去掉id中的横杠
+                window.location.href = '/operating/cronjobs/cron_update/' + re_data + '/';
+            });
+
+        })
+    </script>
+{% endblock %}

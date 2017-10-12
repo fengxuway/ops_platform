@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+
+{% block css %}
+    <link rel="stylesheet" href="{% static 'codemirror/theme/abcdef.css' %}">
+    <link rel="stylesheet" href="{% static 'codemirror/codemirror.css' %}">
+    <style>
+    .CodeMirror {
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+    }
+    th{
+        background: #ddf;
+    }
+
+    table.table > tbody > tr > td.progress_bar{
+        padding: 8px 0 0;
+    }
+    .upload_progress{
+        height: 3px;
+        margin-top: 5px;
+        background: #4af;
+        width: 0%;
+    }
+    th{background:#F6F8F8;}
+    thead tr{    border-top: 2px solid rgb(74, 155, 255) !important;}
+        form.form-horizontal label.control-label { text-align: left;}
+        .file-box{ position:relative;width:70px}
+        .txt{ height:22px; border:1px solid #cdcdcd; width:180px;}
+        .uploadFile{ position:absolute; top:0; left:0px; height:24px; filter:alpha(opacity:0);opacity: 0;width:70px }
+        .textfield{ height: 30px; font-size: 12px;  }
+        table th, table, td{text-align: center;}
+        .file_list button { height: 28px; font-size: 12px;}
+        .file_list td:nth-last-child(1) { padding:4px;}
+        .panel{ border-radius:0;}
+        .panel-heading{ border-radius: 0;}
+        .panel-footer{ border-radius:0;}
+        input[name^='title']{width: 25%;
+            display: inline-block;}
+
+    .king-timeline {
+    position: relative;
+    margin: 0 0 30px 0;
+    padding: 0;
+    list-style: none;
+}
+
+
+.king-timeline:before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    bottom: 0;
+    width: 4px;
+    background: #ddd;
+    left: -37px;
+    margin: 0;
+    border-radius: 2px;
+}
+    .king-timeline > li {
+    position: relative;
+    margin-right: 10px;
+    margin-bottom: 15px;
+}
+    .king-timeline > li:before, .king-timeline > li:after {
+    content: " ";
+    display: table;
+}
+    .king-timeline > li > .fa, .king-timeline > li > .glyphicon, .king-timeline > li > .ion {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+    line-height: 30px;
+    position: absolute;
+    color: #fff;
+    background: #d2d6de;
+    border-radius: 50%;
+    text-align: center;
+    left: -50px;
+    top: 0;
+}
+.king-bg-blue.current {
+    background-color: #4A9BFF !important;
+}
+
+.king-timeline > li:after {
+    clear: both;
+}
+.king-timeline > li:before, .king-timeline > li:after {
+    content: " ";
+    display: table;
+}
+
+
+.king-bg-blue {
+    background-color: #0c0 !important;
+}
+
+    </style>
+{% endblock %}
+{% block body %}
+    <div class="content-wrapper">
+        <section class="content-header">
+            <h1>
+                新建作业
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li class="active">新建作业</li>
+            </ol>
+        </section>
+
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+
+                        <div class="box-header row">
+                            <div class="col-sm-10 col-sm-offset-1">
+                                <div id="tips"></div>
+                                <form id="form" action="{% url 'operating:addjob' %}" method="post" role="form" class="form-horizontal">
+                                    {% csrf_token %}
+                                    <div class="form-group">
+                                        <label for="id_name_1" class="col-sm-2 control-label">任务名称</label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="id_name_1" name="name" placeholder="任务名称" required value="{{ job.name }}">
+                                        </div>
+                                    </div>
+
+                                    <ul class="king-timeline">
+                                        {% for task in tasks %}
+                                        {% if task.get_type == 'FileTransfer' %}
+                                        <li data-id="{{ task.id.get_hex }}">
+                                            <i class="fa">{{ forloop.counter }}</i>
+                                            <div class="panel panel-info" data-id="{{ forloop.counter }}" id="task_{{ forloop.counter }}">
+                                                <input type="hidden" name="type_{{ forloop.counter }}" value="file">
+                                                <input type="hidden" name="id_order" value="{{ forloop.counter }}">
+                                                <div class="panel-heading">
+                                                    <h3 class="panel-title"><strong>文件</strong>&nbsp;步骤名称：<input class="form-control" value="{{ task.name }}" type="text" name="title_{{ forloop.counter }}">
+{#                                                    <a style="float: right;" href="javascript:void(0);" class="remove_task btn btn-default"><i class="fa fa-close"></i></a>#}
+                                                    <a style="float: right;" href="javascript:void(0);" class="scroll_task btn btn-default"><i class="fa fa-chevron-down"></i></a>
+                                                    </h3>
+                                                    <span class="server_ids"></span>
+                                                    <div style="clear:both;"></div>
+                                                </div>
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>执行账户</th>
+                                                        <th>服务器数</th>
+                                                        <th>目标路径</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr>
+                                                        <td><input class="form-control" type="text" name="user_1" value="{{ task.user }}" readonly></td>
+                                                        <td><input class="form-control" type="text" name="server_count_1" value="{{ task.server | split:',' | length }}" readonly></td>
+                                                        <td><input class="form-control" type="text" name="path_1" value="{{ task.dest_path }}"></td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div class="panel-body" style="display:none;">
+                                                    <div class="result_table panel panel-default">
+                                                        <div class="panel-heading">等待执行。。。</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        {% endif %}
+                                        {% if task.get_type == 'RunScript' %}
+                                        <li data-id="{{ task.id.get_hex }}"><i class="fa">{{ forloop.counter }}</i>
+                                            <div class="panel panel-success" data-id="{{ forloop.counter }}" id="task_{{ forloop.counter }}">
+                                                <input type="hidden" name="type_{{ forloop.counter }}" value="script">
+                                                <input type="hidden" name="id_order" value="{{ forloop.counter }}">
+                                                <div class="panel-heading">
+                                                    <h3 class="panel-title"><strong>脚本</strong>&nbsp;步骤名称：<input class="form-control" type="text" name="title_{{ forloop.counter }}" value="{{ task.name }}">
+{#                                                    <a style="float: right;" href="javascript:void(0);" class="remove_task btn btn-default"><i class="fa fa-close"></i></a>#}
+                                                    <a style="float: right; " href="javascript:void(0);" class="scroll_task btn btn-default"><i class="fa fa-chevron-down"></i></a>
+                                                    </h3>
+                                                    <span class="server_ids"></span>
+                                                    <div style="clear:both;"></div>
+                                                </div>
+                                                <table class="table table-bordered">
+                                                    <thead>
+                                                    <tr>
+                                                        <th>执行账户</th>
+                                                        <th>服务器数</th>
+                                                        <th>脚本参数</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    <tr>
+                                                        <td><input class="form-control" type="text" name="user_{{ forloop.counter }}" value="root" readonly></td>
+                                                        <td><input class="form-control" type="text" name="server_count_{{ forloop.counter }}" value="{{ task.server | length }}" readonly></td>
+                                                        <td><input class="form-control" type="text" name="args_{{ forloop.counter }}" value="{{ task.script_args }}"></td>
+                                                    </tr>
+                                                    </tbody>
+                                                </table>
+                                                <div class="panel-body" style="display:none;">
+                                                    <div class="form-group" style="display : none;">
+                                                        <label class="col-sm-2 control-label"></label>
+                                                        <div class="col-sm-7">
+                                                            <div class="well well-lg">
+                                                                <div class="btn btn-primary">
+                                                                    <input name="local_file" type="file" class="upload"/>
+                                                                </div>
+                                                                目前支持 .sh 后缀脚本
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label class="col-sm-2 control-label">脚本内容(只读)</label>
+                                                        <div class="col-sm-10">
+                                                            <textarea class="shell_editor" name="script_content_{{ forloop.counter }}">{{ task.script_content }}</textarea>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="result_table panel panel-default">
+                                                         <div class="panel-heading">等待执行。。。</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </li>
+                                        {% endif %}
+                                        {% endfor %}
+                                    <li><i class="fa">END</i></li>
+                                    </ul>
+
+                                </form>
+                            </div>
+                        </div>
+                        <div class="box-body table-responsive ">
+                            <div class="col-sm-10 col-sm-offset-1">
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section><!-- /.content -->
+    </div><!-- /.content-wrapper -->
+
+{% endblock %}
+{% block script %}
+    <script src="{% static 'codemirror/codemirror.js' %}"></script>
+    <script src="{% static 'codemirror/mode/shell/shell.js' %}"></script>
+
+    <script>
+
+        var current_task = '{{ job.current_task }}';
+
+        function initTableCheckbox($table) {
+            var $thr = $table.find("thead").find("tr");
+            var $checkAllTh = $('<th><input type="checkbox" id="checkAll" name="checkAll" /></th>');
+            /*将全选/反选复选框添加到表头最前，即增加一列*/
+            $thr.prepend($checkAllTh);
+            /*“全选/反选”复选框*/
+            var $checkAll = $thr.find('input');
+            $checkAll.click(function (event) {
+                /*将所有行的选中状态设成全选框的选中状态*/
+                $tbr.find('input').prop('checked', $(this).prop('checked'));
+                /*并调整所有选中行的CSS样式*/
+                if ($(this).prop('checked')) {
+                    $tbr.find('input').parent().parent().addClass('warning');
+                } else {
+                    $tbr.find('input').parent().parent().removeClass('warning');
+                }
+                /*阻止向上冒泡，以防再次触发点击操作*/
+                event.stopPropagation();
+            });
+            /*点击全选框所在单元格时也触发全选框的点击操作*/
+            $checkAllTh.click(function () {
+                $(this).find('input').click();
+            });
+            var $tbr = $table.find("tbody").find("tr");
+            var $checkItemTd = $('<td><input type="checkbox" name="checkItem" /></td>');
+            /*每一行都在最前面插入一个选中复选框的单元格*/
+            $tbr.prepend($checkItemTd);
+            /*点击每一行的选中复选框时*/
+            $tbr.find('input').click(function (event) {
+                /*调整选中行的CSS样式*/
+                $(this).parent().parent().toggleClass('warning');
+                /*如果已经被选中行的行数等于表格的数据行数，将全选框设为选中状态，否则设为未选中状态*/
+                $checkAll.prop('checked', $tbr.find('input:checked').length == $tbr.length);
+                /*阻止向上冒泡，以防再次触发点击操作*/
+                event.stopPropagation();
+            });
+            /*点击每一行时也触发该行的选中操作*/
+            $tbr.click(function () {
+                $(this).find('input').click();
+            });
+        }
+
+        $(function(){
+            var editors = new Map();
+            var $tips = $("#tips");
+
+            $(".shell_editor").each(function(i, v){
+                editors[$(v).attr("name")] = CodeMirror.fromTextArea(v, {
+                    mode: "text/x-sh",  //设置语法高亮
+                    lineNumbers: true,       //显示行号
+                    tabSize: 4,             //tab缩进为4
+                    smartIndent: true,      //是否智能缩进
+                    matchBrackets: true,
+                    styleActiveLine: true,
+                    lineWrapping: true, //是否强制换行
+                    theme: "abcdef",  //样式
+                    scrollbarStyle: "native", //
+                    lineWiseCopyCut: true,  //启用时，如果在复制或剪切时没有选择文本，那么就会自动操作光标所在的整行
+                    cursorHeight: "0.85",  //光标高度。默认为1，也就是撑满行高。对一些字体，设置0.85看起来会更好。
+                    readOnly:true
+                });
+                editors[$(v).attr("name")].setSize('auto','150px');
+            });
+
+
+            var $add_server_btn = $("#add_server_btn");
+            $(".box-header").delegate(".scroll_task", 'click', function(){
+                var $panel = $(this).parents(".panel");
+                if($(this).children("i").hasClass('fa-chevron-up')){
+                    $panel.find(".panel-body").slideUp('fast');
+                    $(this).children("i").removeClass("fa-chevron-up").addClass("fa-chevron-down");
+                }else{
+                    $panel.find(".panel-body").slideDown('fast');
+                    $(this).children("i").removeClass("fa-chevron-down").addClass("fa-chevron-up");
+                    var data_id = $panel.attr("data-id");
+                    if($panel.find("input[name='type_"+data_id+"']").val() == 'script'){
+                        editors[$panel.find("textarea.shell_editor").attr("name")].refresh();
+                    }
+                }
+            });
+
+            refresh_result();
+            var inter = setInterval(function(){
+                if(!current_task){
+                    clearInterval(inter);
+                    return false;
+                }
+                refresh_result();
+            }, 10000);
+
+        });
+    function refresh_result(){
+        simple_ajax({
+            url: '{% url 'operating:job_process' job_id=job.id.get_hex %}',
+            data:{
+                current_task:current_task
+            },
+            success: function(data){
+                console.log(data);
+                $(".king-timeline > li > i").removeClass('current');
+                current_task = data.current_task;
+                if(data.current_task){
+                    $(".king-timeline > li").each(function(i, v){
+                        if($(this).attr("data-id")==data.current_task){
+                            return false;
+                        }
+                        $(this).children("i").addClass("king-bg-blue");
+                    });
+                    $("li[data-id='"+data.current_task+"']").children("i").addClass("king-bg-blue").addClass('current');
+                    $("li[data-id='"+data.current_task+"']").find(".result_table").html('<div class="panel-heading">正在执行</div>');
+                }else{
+                    $(".king-timeline > li > i").addClass("king-bg-blue").removeClass('current');
+                }
+                $.each(data.data, function(id, task){
+                    var html = '<div class="panel-heading">执行结果</div>';
+                    if(task.task_type == 'job_filetransfer'){
+                        var result = $.parseJSON(task.result);
+                        $.each(result, function(i, v){
+                            html += '<div class="panel-body"><p>'+i+'</p></div> ' +
+                                    '<table class="table table-bordered">';
+                            $.each(v, function(k, c){
+                                html += '<tr>'
+                                  +'    <td>'+k+'</td>'
+                                  +'    <td>'+(c['result']?"发送成功！":"发送失败：" + c['message'])+'</td>'
+                                  +'</tr>';
+                            });
+                            html += "</table>";
+                        });
+                        $("li[data-id='"+id+"']").find(".result_table").html(html);
+                    }else if(task.task_type == 'job_bash'){
+                        html += draw_script_result(id, task.result);
+                        $("li[data-id='"+id+"']").find(".result_table").html(html);
+                    }
+                });
+            }
+        });
+    }
+
+
+    function draw_script_result(id, result){
+        result = $.parseJSON(result);
+        var parent_id = 'accordion_'+id;
+        var html = '<div class="panel-group" id="'+parent_id+'" role="tablist" aria-multiselectable="true">';
+        $.each(result, function(ip, v){
+            var _ip = id + '_' + ip.replace(/\./g, '_');
+            if('dark' in v) {
+                // ansible连接dark时
+                v.message = v.dark.message;
+                v.result = false;
+            }
+            var message = v.message.replace(/\r\n/g, '<br>');
+            if(!message){
+                message = '没有输出。'
+            }
+            html += '<div class="panel panel-default">'
+                  +'  <div class="panel-heading" role="tab" id="headingOne_'+_ip+'">'
+                  +'    <h4 class="panel-title">'
+                  +'      <a  class="collapsed" role="button" data-toggle="collapse" data-parent="#'+parent_id+'" href="#collapseOne_'+_ip+'" aria-expanded="false" aria-controls="collapseOne">'
+                  +ip + '&nbsp;&nbsp;&nbsp;'
+                  + (v.result == true? '执行完成！':'执行出错！')
+                  +'      </a>'
+                  +'    </h4>'
+                  +'  </div>'
+                  +'  <div id="collapseOne_'+_ip+'" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingOne_'+_ip+'">'
+                  +'    <div class="panel-body">'
+                  + message
+                  +'    </div>'
+                  +'  </div>'
+                  +'</div>';
+        });
+        html += "</div>";
+        return html;
+    }
+    </script>
+{% endblock %}

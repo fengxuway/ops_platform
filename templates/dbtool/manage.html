@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+{% block title %}数据库管理工具{% endblock %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'codemirror/theme/abcdef.css' %}">
+    <link rel="stylesheet" href="{% static 'codemirror/codemirror.css' %}">
+    <style>
+    .CodeMirror {
+        border-top: 1px solid black;
+        border-bottom: 1px solid black;
+    }
+    th{
+        background: #ddf;
+    }
+    </style>
+{% endblock %}
+
+{% block body %}
+
+
+        <!-- Content Wrapper. Contains page content -->
+        <div class="content-wrapper">
+            <!-- Content Header (Page header) -->
+            <section class="content-header">
+                <h1>
+                    数据源管理
+                </h1>
+                <ol class="breadcrumb">
+                    <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                    <li><a href="{% url 'dbtool:index' %}"><i class="fa fa-dashboard"></i> 数据库管理工具</a></li>
+                    <li class="active">数据源管理</li>
+                </ol>
+
+            </section>
+
+            <!-- Main content -->
+            <section class="content">
+
+                <div class="row">
+                    <div class="col-xs-12">
+                        <div class="box">
+                            <div class="box-header">
+                                <div id="tips"></div>
+                            </div>
+                            <div class="box-body table-responsive">
+                                <table class="table table-bordered" id="db_table">
+                                    <thead>
+                                        <tr>
+                                            <th width="18%">数据源名称</th>
+                                            <th width="15%">host</th>
+                                            <th width="10%">port</th>
+                                            <th width="10%">user</th>
+                                            <th width="18%" title="置空则不修改密码">password</th>
+                                            <th width="20%">数据库名</th>
+                                            <th>编码</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for db in dbsource %}
+                                    <tr data-id="{{ db.id }}">
+                                    <td>{{ db.name }}</td>
+                                    <td>{{ db.host }}</td>
+                                    <td>{{ db.port }}</td>
+                                    <td>{{ db.user }}</td>
+                                    <td></td>
+                                    <td>{{ db.dbname }}</td>
+                                    <td>{{ db.charset }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                                <button id="submit" class="btn btn-primary" style="margin-top:15px; float:right;">提交修改</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section><!-- /.content -->
+        </div><!-- /.content-wrapper -->
+{% endblock %}
+{% block script %}
+    <script>
+    $(function(){
+        var $db_table = $("#db_table");
+        $db_table.delegate("td:not(:nth-child(1))", "click", function(){
+            var $this = $(this);
+            if($this.children("input").length > 0){
+                return false;
+            }
+
+            $db_table.find("input:text").each(function(i, v){
+                $(this).parent().html($(this).val())
+            });
+            var height = parseInt($this.css("height"));
+            var width = parseInt($this.css("width"));
+            var padding = parseInt($this.css("padding"));
+            var val = $this.html();
+            $this.attr("data-val", val);
+            var $input = '<input type="text" style="width:'+(width-2*padding -1)+'px;height:'+(height-2*padding-1)+'px;" value="' + val + '">';
+            $this.html($input);
+            $this.children("input").select()
+        });
+        $db_table.delegate("input[type='text']", "keyup", function(e){
+            var $this = $(this);
+            var $td = $this.parent();
+            if(e.keyCode == 13){
+                $td.html($this.val())
+            }else if(e.keyCode == 27){
+                $td.html($td.attr("data-val"));
+            }
+        });
+        $("#submit").click(function(){
+            $db_table.find("input:text").each(function(i, v){
+                $(this).parent().html($(this).val())
+            });
+{#            var map = new Map();#}
+            var data = Array();
+            $db_table.find("tbody").find("tr").each(function(i, v){
+{#                var obj = {};#}
+                var obj = {};
+                var $tr = $(this);
+
+                obj.name = $tr.find("td:eq(0)").html();
+                obj.host = $tr.find("td:eq(1)").html();
+                obj.port = $tr.find("td:eq(2)").html();
+                obj.user = $tr.find("td:eq(3)").html();
+                obj.passwd = $tr.find("td:eq(4)").html();
+                obj.dbname = $tr.find("td:eq(5)").html();
+                obj.charset = $tr.find("td:eq(6)").html();
+                data.push(obj);
+            });
+            simple_ajax({
+                url: '{% url 'dbtool:manage' %}',
+                data: {'data':JSON.stringify(data)},
+                success: function(data){
+                    console.log(data);
+                    if(data.result == true){
+                        $("#tips").html(tips('success', data.message));
+                    }else{
+                        $("#tips").html(tips("warning", data.message));
+                    }
+                }
+            })
+        });
+    })
+    </script>
+{% endblock %}

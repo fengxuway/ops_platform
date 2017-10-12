@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>小能监控中心</title>
+    <style>
+        body{ margin:0; padding:0; }
+        iframe{ width:100%; height:100%; border:none;
+            position: absolute;}
+    </style>
+    <script src="/static/admin_lte/plugins/jQuery/jQuery-2.1.4.min.js"></script>
+    <script>
+        $(function(){
+            var $iframe = $("#iframe");
+            $iframe.width($(window).width()).height($(window).height);
+            setInterval(function(){
+                $iframe.width($(window).width()).height($(window).height());
+            }, 500);
+            var urls = [
+                    "http://monitor.xiaoneng.cn:3000/dashboard/db/xiao-neng-wang-luo-zhi-liang-jian-kong-zhong-xin",
+                    "http://monitor.xiaoneng.cn:3000/dashboard/db/xiao-neng-zi-xun-ye-wu-jian-kong-zhong-xin",
+            ];
+            var length = urls.length;
+            var iframes = "";
+            for(var i = 0; i < length; i++){
+                iframes += '<iframe data-index="'+i+'" src="'+urls[i]+'"></iframe>';
+            }
+            $("body").append(iframes);
+            var i = 0;
+            setInterval(function(){
+                i ++;
+                if(i >= urls.length){
+                    i = 0;
+                }
+                var prev = i == 0 ? length - 1: i-1;
+                $("iframe[data-index="+i+"]").css("z-index", 50).css("opacity",1);
+                $("iframe[data-index="+prev+"]").animate({"opacity":0}, 3500, function () {
+                    $("iframe[data-index="+prev+"]").css("z-index",1).css("opacity",1);
+                    $("iframe[data-index="+i+"]").css("z-index",100);
+                });
+            }, 20000)
+        })
+    </script>
+</head>
+<body>
+</body>
+</html>

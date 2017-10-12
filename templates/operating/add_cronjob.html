@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% block title %}配置管理系统_V1.0.0{% endblock %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'codemirror/theme/abcdef.css' %}">
+    <link rel="stylesheet" href="{% static 'codemirror/codemirror.css' %}">
+    <style>
+        form.form-horizontal label.control-label {
+            text-align: left;
+        }
+
+        .file-box {
+            position: relative;
+            width: 70px
+        }
+
+        .txt {
+            height: 22px;
+            border: 1px solid #cdcdcd;
+            width: 180px;
+        }
+
+        {#    .btn{ background-color:#FFF; border:1px solid #CDCDCD;height:24px; width:70px;}#}
+        .file {
+            position: absolute;
+            top: 0;
+            left: 0px;
+            height: 24px;
+            filter: alpha(opacity:0);
+            opacity: 0;
+            width: 70px
+        }
+
+        #textfield {
+            height: 30px;
+            font-size: 12px;
+        }
+
+        table th, table, td {
+            text-align: center;
+        }
+
+        #file_list button {
+            height: 28px;
+            font-size: 12px;
+        }
+
+        #file_list td:nth-last-child(1) {
+            padding: 4px;
+        }
+
+        #selected_server_list {
+            padding-top: 20px;
+        }
+
+        .large .modal-dialog {
+            width: 60%; /* respsonsive width */
+        }
+
+        table.table > tbody > tr > td.progress_bar {
+            padding: 8px 0 0;
+        }
+
+        .upload_progress {
+            height: 3px;
+            margin-top: 5px;
+            background: #4af;
+            width: 0%;
+        }
+    </style>
+
+{% endblock %}
+
+
+{% block body %}
+
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                {% if crn_obj %}更新定时作业{% else %}新建定时作业{% endif %}
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li><a href="{% url 'operating:cronjobs' %}"><i class="fa fa-server"></i> 定时作业</a></li>
+                <li class="active">{% if crn_obj %}更新定时作业{% else %}新建定时作业{% endif %}</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        {% comment %}<div class="box-header">
+                                <h3 class="box-title">Server</h3>
+                                <button type="button" id="button">点击获取</button>
+
+                            </div>{% endcomment %}<!-- /.box-header -->
+                        <div class="box-body">
+                            {#                                {% if message and message.result == False %}#}
+                            {#                                <div class="alert alert-danger"><strong>添加失败：</strong>{{ message.message }}</div>#}
+                            {#                                {% endif %}#}
+                            <form id="operating_form" class="form-horizontal" role="form" action="{% if crn_obj %}{% url 'operating:cron_update' crn_id=crn_obj.id.get_hex %}{% else %}{% url 'operating:add_cronjobs' %}{% endif %}" method="post" enctype="multipart/form-data">
+                                <input id="id_id" name="id" type="hidden" value=""/>
+                                <input name="operating_id" type="hidden" value=""/>
+                                <input name="type" type="hidden" value=""/>
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <label for="id_script_name" class="col-sm-2 control-label">定时任务</label>
+                                    <div class="col-sm-7">
+                                        <input type="text" class="form-control" id="id_script_name" name="name"
+                                               value="{% if crn_obj %}{{ crn_obj.name }}{% else %}{{ cron_name }}{% endif %}" {% if crn_obj %} readonly {% else %}{% endif %}>
+                                        请输入英文名，暂不支持中文！如:"cron-restart-t2d",不加双引号！
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_remote_host" class="col-sm-2 control-label">目标主机</label>
+
+                                    <div class="col-sm-10">
+                                        <!-- 按钮触发模态框 -->
+                                        <button type="button" class="btn btn-success btn-sm" data-toggle="modal"
+                                                data-target="#myModal">选择服务器
+                                        </button>
+
+                                        <div id="selected_server_list">
+                                            <table id="selected_server_table"
+                                                   class="table table-bordered table-hover">
+                                                <thead>
+                                                <tr class="success">
+                                                    <th>主机名</th>
+                                                    <th>内网IP</th>
+                                                    <th>外网IP</th>
+                                                    <th>操作</th>
+                                                    <th>状态</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody></tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- 模态框（Modal） -->
+                                        <div class="modal fade large" id="myModal" tabindex="-1" role="dialog"
+                                             aria-labelledby="myModalLabel" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <button type="button" class="close"
+                                                                data-dismiss="modal" aria-hidden="true">
+                                                            &times;
+                                                        </button>
+                                                        <h4 class="modal-title" id="myModalLabel">
+                                                            <strong>请选择目标服务器</strong>
+                                                        </h4>
+                                                    </div>
+                                                    <div class="modal-body">
+
+                                                        <table class="table table-bordered table-hover" id="mytable">
+                                                            <thead>
+                                                            <tr class="success">
+                                                                <th>ServerID</th>
+                                                                <th>主机名</th>
+                                                                <th>内网IP</th>
+                                                                <th>外网IP</th>
+                                                                <th>连接状态</th>
+                                                            </tr>
+                                                            </thead>
+                                                        </table>
+
+
+                                                    </div>
+                                                    <div class="modal-footer">
+{#                                                        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>#}
+                                                        <button type="button" class="btn btn-primary" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">取消</span></button>
+                                                        <button type="button" class="btn btn-success" data-dismiss="modal" aria-label="Close" id="add_server_btn"><span aria-hidden="true">添加</span></button>
+                                                    </div>
+                                                </div>
+                                                <!-- /.modal-content -->
+                                            </div>
+                                            <!-- /.modal -->
+
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_source" class="col-sm-2 control-label">脚本来源</label>
+
+                                    <div class="col-sm-7">
+                                        <label class="raido-inline">
+                                            <input type="radio" value="1" name="radioform" checked="checked">手工录入</label>
+                                        &nbsp;&nbsp;
+                                        <label class="raido-inline">
+                                            <input type="radio" value="2" name="radioform">本地脚本</label>
+
+                                    </div>
+                                </div>
+
+
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label"></label>
+
+                                    <div class="col-sm-7">
+                                        <div class="well well-lg" id="id_well" style="display : none;">
+
+                                            <div class="btn btn-primary">
+                                                <input id="local_file" name="local_file" type="file" class="upload" onchange="upload(this)"/>
+                                            </div>
+                                            暂时只支持 .sh 后缀脚本高亮
+                                        </div>
+
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="id_script_content" class="col-sm-2 control-label">脚本内容</label>
+
+                                    <div class="col-sm-10" id="textarea_div">
+                                        <!--codemirror start-->
+
+                                        <textarea id="id_editor" name="script_content">{% if crn_obj %}{{ crn_obj.script_content }}{% else %}#!/bin/bash
+{% endif %}</textarea>
+
+                                        <!--codemirror end-->
+
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="col-sm-2 control-label">定时表达式</label>
+
+                                    <div class="col-sm-7" id="div_cron_content">
+                                        <input type="text" class="form-control" id="id_cron_content" name="cron_content" value="{% if crn_obj %}{{ crn_obj.cron_content }}{% else %}{% endif %}">
+                                        <small>格式为： “* * * * *” ，例如 “*/10 1,3,5,7 * 10 *” （分、时、日、月、周格式，使用空格分隔，不加双引号！）</small>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <div class="col-sm-offset-2 col-sm-10">
+                                        <br>
+                                        <button type="button" class="btn btn-primary" id="submit-btn">{% if crn_obj %}更新{% else %}保存{% endif %}定时作业</button>
+                                    </div>
+                                </div>
+
+                                <a id="anchor_scroll" href="#id_well" style="display:none">点击这里本页跳转</a>
+
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+{% endblock %}
+{% block script %}
+    <script src="{% static 'codemirror/codemirror.js' %}"></script>
+    <script src="{% static 'codemirror/mode/shell/shell.js' %}"></script>  <!--语法高亮-->
+
+
+    <script>
+
+        var url_server_list = "{% url 'server:job_list_page' %}";  //用于弹出的摸态框中进行搜索过滤
+
+        //设置textarea高亮
+        var textarea = document.getElementById('id_editor');
+        var myTextarea = document.getElementById('id_editor');
+        var CodeMirrorEditor = CodeMirror.fromTextArea(myTextarea, {
+            mode: "text/x-sh",  //设置语法高亮
+            lineNumbers: true,       //显示行号
+            tabSize: 4,             //tab缩进为4
+            smartIndent: true,      //是否智能缩进
+            height: "750px",
+            matchBrackets: true,
+            styleActiveLine: true,
+            lineWrapping: true, //是否强制换行
+            theme: "abcdef",  //样式
+            scrollbarStyle: "native", //
+            lineWiseCopyCut: true,  //启用时，如果在复制或剪切时没有选择文本，那么就会自动操作光标所在的整行
+            cursorHeight: "0.85"  //光标高度。默认为1，也就是撑满行高。对一些字体，设置0.85看起来会更好。
+
+        });
+
+        // 获取上传文件内容，把内容展示到textarea中
+        function upload(input) {
+            //支持chrome IE10
+            if (window.FileReader) {
+                var file = input.files[0];
+                filename = file.name.split(".")[0];
+                var reader = new FileReader();
+                reader.onload = function () {
+                    console.log(this.result)  //this.result值为本地文件内容
+                    CodeMirrorEditor.setValue(this.result);  //把本地文件内容放到codemirror中去
+                }
+                reader.readAsText(file);
+            }
+        }
+
+
+        //单选按钮隐藏/显示div
+        $(":radio[name='radioform']").click(function () {
+            var index = $(":radio[name='radioform']").index($(this));
+            if (index == 1) //选中第2个时，div显示
+                $("#id_well").show(),
+                        $("#textarea_div").hide();
+
+            else
+                $("#id_well").hide();  //当被选中的不是第2个时，div隐藏
+            $("#textarea_div").show();
+
+        });
+
+        //点击删除按钮，删除当前行
+        function deltr(nowTr){
+            $(nowTr).parent().parent().remove();
+        }
+
+        //点击按钮，页面滚动到页面底部
+        function goBottom() {
+            window.scrollTo(0, document.documentElement.scrollHeight-document.documentElement.clientHeight);
+        }
+        //点击按钮，页面跳转到指定div处
+        function goDiv(div) {
+            var a = $("#"+div).offset().top;
+            $("html,body").animate({scrollTop:a}, 'slow');
+        }
+        //验证计划任务内容输入是否正确
+        $("#id_cron_content").blur(function(){
+            var crn_content = $(this).val().trim().split(" ").length; //trim()去掉前后空格；split(" ")按空格切割为列表；length为获取列表的长度
+            console.log(crn_content)
+            if(crn_content != 5){
+                alert('计划任务内容输入错误，请确认输入为5位参数!!');
+            }
+        });
+
+    </script>
+    <script src="{% static 'js/page/add_cron_server.js' %}"></script>
+{% endblock %}

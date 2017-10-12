@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% block title %}配置管理系统_V1.0.0{% endblock %}
+{% block css %}
+
+{% endblock %}
+
+{% block body %}
+
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                {% if srv %}修改{% else %}添加{% endif %}Server
+                {#                    <small>控制面板</small>#}
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li><a href="{% url 'server:index' %}"><i class="fa fa-server"></i> Server列表</a></li>
+                <li class="active">{% if srv %}修改Server{% else %}添加Server{% endif %}</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-body">
+                            {% if message and message.result == False %}
+                                <div class="alert alert-danger"><strong>添加失败：</strong>{{ message.message }}</div>
+                            {% endif %}
+
+                            <form id="server_form" class="form-horizontal" role="form" action="
+                                    {% if srv %}{% url 'server:modify' srv_id=srv.id %}{% else %}{% url 'server:add_server' %}{% endif %}"
+                                  method="post" onsubmit="return validate()">
+                                <input id="id_id" name="id" type="hidden" value="{{ srv.id }}"/>
+                                <input name="server_id" type="hidden" value="{{ srv.server_id }}"/>
+                                <input name="type" type="hidden" value="{% if srv %}update{% else %}add{% endif %}"/>
+                                {% csrf_token %}
+{#                                <div class="form-group">#}
+{#                                    <label for="id_name" class="col-sm-2 control-label">主机名</label>#}
+{##}
+{#                                    <div class="col-sm-10">#}
+{#                                        <input type="text" class="form-control" id="id_name" name="name"#}
+{#                                               placeholder="主机名" required value="{{ srv.InstanceName }}">#}
+{#                                    </div>#}
+{#                                </div>#}
+                                <div class="form-group">
+                                    <label for="id_inner_ip" class="col-sm-2 control-label">内网IP</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_inner_ip" name="inner_ip"
+                                               placeholder="内网IP" value="{{ srv.InnerIpAddress }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_outer_ip" class="col-sm-2 control-label">外网IP</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_outer_ip" name="outer_ip"
+                                               placeholder="外网IP" value="{{ srv.PublicIpAddress }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_area" class="col-sm-2 control-label">来源</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_area" name="area"
+                                               placeholder="来源" required value="{{ srv.RegionId }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_user" class="col-sm-2 control-label">用户名</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_user" name="user"
+                                               placeholder="用户名" value="{{ srv.user }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_password" class="col-sm-2 control-label">密码</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="password" class="form-control" id="id_password" name="password"
+                                               placeholder="密码（不填写表示已经连接）" value="{{ srv.pwd }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_port" class="col-sm-2 control-label">端口</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_port" name="port"
+                                               placeholder="端口" value="{% if srv %}{{ srv.port }}{% else %}8022{% endif %}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_sn" class="col-sm-2 control-label">SN号</label>
+
+                                    <div class="col-sm-10">
+                                        <input type="text" class="form-control" id="id_sn" name="sn" placeholder="SN号"
+                                               value="{{ srv.sn }}">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="id_remark" class="col-sm-2 control-label">备注</label>
+
+                                    <div class="col-sm-10">
+                                        <textarea id="id_remark" class="form-control" rows="4" name="remark"
+                                                  value="{{ srv.remark }}">{{ srv.remark }}</textarea>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-sm-offset-2 col-sm-10">
+                                        <button type="button" class="btn btn-primary" id="submit_btn">{% if srv %}修改{% else %}
+                                            添加{% endif %}Server
+                                        </button>
+                                    <br>
+                                    <br>
+                                    <div style="display: none" class="alert alert-warning" id="check_alert">稍后，请等待验证。。。{{ message.message }}</div>
+
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+{% endblock %}
+{% block script %}
+    <script>
+        function validate() {
+            var $inner_ip = $("input[name='inner_ip']");
+            var $outer_ip = $("input[name='outer_ip']");
+            if ($inner_ip.val() == "" && $outer_ip.val() == "") {
+                alert("内网IP和外网IP必须填写一项！");
+                return false;
+            }
+        }
+
+
+    //提交按钮,在提交的同时，包含拷贝秘钥验证功能（如果server连接成功，则可以正常添加到数据库，反之亦然）
+        $("#submit_btn").click(function () {
+            var srv_inner_ip = $('#id_inner_ip').val()
+            var srv_outer_ip = $('#id_outer_ip').val()
+            var srv_user = $('#id_user').val()
+            var srv_pwd = $('#id_password').val()
+            var srv_port = $('#id_port').val()
+            $('#check_alert').show()
+            simple_ajax({
+                url: '{% url 'server:check_ssh_copy' %}',
+                data: {
+                    srv_inner_ip: srv_inner_ip,
+                    srv_outer_ip: srv_outer_ip,
+                    srv_user: srv_user,
+                    srv_pwd: srv_pwd,
+                    srv_port: srv_port
+                },
+                success: function (data) {
+                    if (data.result == false) {
+                        alert(data.message + "请检查ip和用户名密码、端口是否填写正确!");
+                    }
+                    else{
+                        $("#server_form").submit();
+                    }
+                }
+            });
+        });
+
+
+    </script>
+{% endblock %}

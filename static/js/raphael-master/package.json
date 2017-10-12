@@ -1,0 +1,40 @@
+{
+  "name": "raphael",
+  "version": "2.1.4",
+  "description": "JavaScript Vector Library",
+  "main": "raphael.amd.js",
+  "author": {
+    "name": "Dmitry Baranovskiy"
+  },
+  "contributors": [
+    {
+      "name": "Tomas Alabes",
+      "url": "https://github.com/tomasAlabes"
+    }
+  ],
+  "dependencies": {
+    "eve": "git://github.com/adobe-webplatform/eve.git#eef80ed"
+  },
+  "devDependencies": {
+    "bower": "1.4.1",
+    "grunt": "0.4.5",
+    "grunt-cli": "0.1.13",
+    "grunt-contrib-concat": "0.5.0",
+    "grunt-contrib-uglify": "0.2.0",
+    "grunt-replace": "0.8.0",
+    "qunitjs": "1.21.0"
+  },
+  "scripts": {
+    "test": "npm install && bower install && echo \"Open dev/test/index.html with your browser\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/DmitryBaranovskiy/raphael.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DmitryBaranovskiy/raphael/issues"
+  },
+  "keywords": ["svg", "vml", "javascript"],
+  "homepage": "http://dmitrybaranovskiy.github.io/raphael/",
+  "license": "MIT"
+}

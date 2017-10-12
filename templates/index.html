@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+
+{% block body %}
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                数据统计
+                <small>控制面板</small>
+            </h1>
+            <ol class="breadcrumb">
+                <li class="active"> 首页</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-body">
+                            <div class="row">
+                                <div class="col-xs-3">
+                                    <div class="panel panel-success">
+                                        <div class="panel-heading">Server主机</div>
+                                        <ul class="list-group">
+                                            <li class="list-group-item">主机总计：{{ server_total_count }}</li>
+                                            <li class="list-group-item">非空闲主机：600</li>
+                                            <li class="list-group-item">空闲主机：400</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="panel panel-info">
+                                        <div class="panel-heading">Grid统计</div>
+                                        <ul class="list-group">
+                                            <li class="list-group-item">Grid总数：{{ grid_total_count }}</li>
+                                            {% for i in grid_list %}
+                                                <li class="list-group-item">{{ i.area }}：{{ i.count }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="panel panel-primary">
+                                        <div class="panel-heading">服务统计</div>
+                                        <ul class="list-group">
+                                            <li class="list-group-item">服务实例：{{ service_total_count }}</li>
+                                            {% for i in  service_list %}
+                                                <li class="list-group-item">{{ i.service_name }}：{{ i.count }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-xs-3">
+                                    <div class="panel panel-warning">
+                                        <div class="panel-heading">镜像统计</div>
+                                        <ul class="list-group">
+                                            <li class="list-group-item">镜像总数：{{ image_total_count }}</li>
+                                            {% for i in  image_list %}
+                                                <li class="list-group-item">{{ i.service_name }}：{{ i.count }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <br>
+                            <hr>
+                            <br>
+                            <!-- 为 ECharts 准备一个具备大小（宽高）的 DOM -->
+                            <div id="nginx_log_map" style="width: 1200px;height:600px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+{% endblock %}
+
+{% block script %}
+    <script type="text/javascript">
+
+        // 基于准备好的dom，初始化echarts实例
+        $(function () {
+            var myChart = echarts.init(document.getElementById('nginx_log_map'));
+
+            function get_nginx_log_info() {
+                simple_ajax({
+                    url: "{% url 'dashboard:kf_peak' %}",
+                    success: function (data) {
+                        if (data.result == true) {
+                            // 指定图表的配置项和数据
+                            var option = {
+                                color: ['#3398DB'],
+                                tooltip: {
+                                    trigger: 'axis',
+                                    axisPointer: {            // 坐标轴指示器，坐标轴触发有效
+                                        type: 'shadow'        // 默认为直线，可选为：'line' | 'shadow'
+                                    }
+                                },
+                                title: {
+                                    text: '轨迹前10排行 5分钟总访问量: ' + '  ' + '(' + '记录时间:' + data.time + ')'
+                                },
+                                grid: {
+                                    left: '3%',
+                                    right: '4%',
+                                    bottom: '3%',
+                                    containLabel: true
+                                },
+                                xAxis: [
+                                    {
+                                        type: 'category',
+                                        data: data.header,
+                                        axisTick: {
+                                            alignWithLabel: true
+                                        }
+                                    }
+                                ],
+                                yAxis: [
+                                    {
+                                        type: 'value'
+                                    }
+                                ],
+                                series: [
+                                    {
+                                        name: '直接访问',
+                                        type: 'bar',
+                                        barWidth: '60%',
+                                        data: data.data
+                                    }
+                                ]
+                            };
+                            // 使用刚指定的配置项和数据显示图表。
+                            myChart.setOption(option);
+
+                        }
+                    }
+                })
+            }
+
+            // get_nginx_log_info();
+            // 每隔2分刷新页面
+            // setInterval(get_nginx_log_info, 60 * 1000)
+        })
+
+    </script>
+{% endblock %}
+

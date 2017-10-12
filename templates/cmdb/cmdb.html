@@ -1,0 +1,669 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+{% block css %}
+    <link rel="stylesheet" href="{% static 'css/clipboard-tooltips.css' %}">
+    <style>
+        .cls_datatables tr {
+            border: 1px solid #cad9ea;
+            color: #666;
+        }
+        .cls_datatables th {
+            background-repeat: repeat-x;
+            height: 30px;
+        }
+        .cls_datatables td, .cls_datatables th {
+            border: 1px solid #cad9ea;
+            padding: 0 1em 0;
+        }
+        .showul label{display:block; margin: 3px 0;}
+        .showul { padding: 10px 15px; }
+        .graph i{ display: inline-block; width:15px; height:15px;}
+        ul.showul li:not(:last-child) {
+            border-bottom: 1px dashed #ccc;
+        }
+        td.details-control button {
+            line-height: 18px;
+            padding: 5px 8px 5px 8px;
+        }
+        .clipboard{
+            line-height: 15px;
+        }
+        .clipboard i{
+            border-radius: 4px;
+            font-style: normal;
+            color: #fff;
+            font-weight: 900;
+            margin-right:5px;
+            padding: 0 1px;
+        }
+        .clipboard i.publicip{
+            background: #ff9110;
+        }
+        .clipboard i.innerip{
+            background: #40a54a;
+        }
+        .hidden_cliptext{
+            line-height: 10px; width: 120px;opacity:0;position:absolute;
+        }
+
+    </style>
+{% endblock %}
+{% block body %}
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                Server列表
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li class="active">Server列表</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-header">
+                            <form class="form-inline" action="javascript:void(0);" id="search_form" role="form">
+                                <div class="form-group">
+                                    <div class="form-group">
+                                        <label class="sr-only" for="id_kw">关键字</label>
+                                        <input type="text" class="form-control fa fa-dashboard" id="id_kw" name="kw"
+                                               value="{{ kw }}" placeholder="请输入关键字">
+                                    </div>
+
+                                    <div class="form-group">
+                                        <label class="sr-only" for="search_type">类别</label>
+
+                                        <select id="search_type" name="search_type" class="form-control">
+                                            <option value="">全部</option>
+                                            <option value="aliyun-ecs" {% if search_type == 'aliyun-ecs' %} selected {% endif %}>阿里云ECS</option>
+                                            <option value="aliyun-slb" {% if search_type == 'aliyun-slb' %} selected {% endif %}>阿里云SLB</option>
+                                            <option value="ksyun-ecs" {% if search_type == 'ksyun-ecs' %} selected {% endif %}>金山云ECS</option>
+                                            <option value="ksyun-slb" {% if search_type == 'ksyun-slb' %} selected {% endif %}>金山云SLB</option>
+                                            <option value="hostname" {% if search_type == 'hostname' %} selected {% endif %}>主机名</option>
+                                            <option value="group" {% if search_type == 'group' %} selected {% endif %}>分组</option>
+                                            <option value="ipaddr" {% if search_type == 'ipaddr' %} selected {% endif %}>IP地址</option>
+                                            <option value="region" {% if search_type == 'region' %} selected {% endif %}>所属区域</option>
+                                        </select>
+                                    </div>
+                                    &nbsp;
+                                    <button type="submit" id="search_submit" class="btn btn-primary">搜索</button>
+                                    &nbsp;
+                                    <!-- Single button -->
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-success dropdown-toggle"
+                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> 操作 <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="javascript:void(0);" onclick="window.location.href='{% url 'server:add_server' %}'">添加</a></li>
+                                            <li><a href="javascript:void(0);" id="batch_delete">删除</a></li>
+                                            <li><a href="javascript:void(0);" id="btn_update_info">更新</a></li>
+                                            <li role="separator" class="divider"></li>
+                                            <li><a href="javascript:void(0);" id="btn_bash">执行脚本</a></li>
+                                            <li><a href="javascript:void(0);" id="btn_filetransfer">分发文件</a></li>
+                                            <li><a href="javascript:void(0);" id="btn_job">执行作业</a></li>
+                                        </ul>
+                                    </div>
+                                    &nbsp;
+                                    <!-- Single button -->
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-warning dropdown-toggle"
+                                                data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            回收站 <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a href="#" class="show_del_server"
+                                                   onclick="window.location.href='{% url 'server:show_del_server' %}'">显示已删除的服务器</a></li>
+                                            <li><a href="#" class="show_del_server"
+                                                   onclick="window.location.href='{% url 'server:show_update_info' %}'">显示3天未更新的服务器</a></li>
+                                        </ul>
+                                    </div>
+                                    <div class="btn-group">
+                                        <button type="button" id="export" class="btn btn-default">
+                                            导出
+                                        </button>
+                                    </div>
+                                    <div style="position:relative; z-index:9999; height:100%; width: 200px; float: right; margin-left: 12px;">
+                                        <button class="btn btn-default showcol">列段显示/隐藏</button>
+                                        <ul class="showul" style=" list-style:none;display:none; position:absolute; left:80px; top:10px; background:#FFFFFF; border:1px solid #ccc; width:200px;">
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="1"/>主机名</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="2"/>分组</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="3"/>IP</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="5"/>CPU/内存/硬盘</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="6"/>服务器类型</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="7"/>所属区域</label></li>
+                                            <li><label><input type="checkbox" class="toggle-vis" checked data-column="8"/>操作</label></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </form>
+
+                        </div>
+                        <!-- /.box-header -->
+                        <div class="box-body table-responsive">
+                            <div class="graph">
+                                表格行颜色说明：<i style="background: #EEE;"></i>未连接&nbsp;
+                                <i style="background: #fff; border:1px solid #ccc;"></i>正常运行&nbsp;
+                                <i style="background: #FF9797;"></i>已停机&nbsp;
+                                <i style="background: #CEFFCE;"></i>正在启动&nbsp;
+                                <i style="background: #FFF4C1;"></i>正在关机
+                            </div>
+                            &nbsp;
+
+                            <table id="example" class="display table table-bordered table-hover dataTable"
+                                   cellspacing="0" width="100%">
+                                <thead>
+                                <tr>
+                                    <th style="padding-right:8px"><input type="checkbox" name="check_all"></th>
+                                    <th>主机名</th>
+                                    <th>分组</th>
+                                    <th>IP</th>
+                                    <th>CPU/内存/硬盘</th>
+                                    <th>服务器类型</th>
+                                    <th>所属区域</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                                </thead>
+                                <tbody></tbody>
+
+                            </table>
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+
+
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title" id="myModalLabel">主机连接日志</h4>
+                </div>
+                <div class="modal-body" id="log_content">
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="connect_again">重新连接</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+{% endblock %}
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js" %}"></script>
+    <script>
+        function format(d) {
+            // `d` is the original data object for the row
+            var null_val = "暂无";
+            {#            var ss = '<table cellpadding="5" cellspacing="0" border="green dotted border-width:2 0 0 2">' +#}
+            var ss = '<table cellpadding="5" cellspacing="0" border="0" style="padding-left:50px;" class="cls_datatables">' +
+                    '<tr>' +
+                    '<td><strong>实例ID：<\strong></td>' +
+                    '<td>' + (d.InstanceId ? d.InstanceId : null_val) + '</td>' +
+{#                    '<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>' +#}
+                    '<td><strong>操作系统：<\strong></td>' +
+                    '<td>' + (d.os ? d.os : null_val) + ' ' + (d.os_version ? d.os_version : null_val) + ' ' + (d.os_release ? d.os_release : null_val) + ' ' + (d.sys_bits ? d.sys_bits : null_val) + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                    '</tr>' +
+                    '<tr>' +
+                    '<td><strong>CPU信息：<\strong></td>' +
+                    '<td>' + (d.Cpu_info ? d.Cpu_info : null_val) + '</td>' +
+{#                    '<td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>' +#}
+                    '<td><strong>更新时间：<\strong></td>' +
+                    '<td>' + d.update_time + '</td>' +
+                    '</tr>' +
+                    '<tr>' +
+                    '<td><strong>备注：<\strong></td>' +
+                    '<td colspan="3">' + (d.remark ? d.remark : null_val) + '</td>' +
+                    '</tr>' +
+                    '</table>';
+            return ss;
+        }
+        $(function () {
+
+            var $table = $("#example");
+            var table = $table.DataTable({
+                "bFilter": false,//去掉搜索框
+                //"bAutoWidth": true, //自适应宽度
+                "sPaginationType": "full_numbers",
+                //"sAjaxDataProp" : "aData",
+                "bDestroy": true,
+                "bProcessing": true,
+                "iDisplayLength": 10,
+                "sAjaxSource": "{% url 'server:job_list_page' %}?" + $("#search_form").serialize(),
+                "bServerSide": true,
+                "stripeClasses": [ 1, 2],
+                "columns": [
+                    {"data": "id", "class": "num"},
+                    {"data": "InstanceName"},
+                    {"data": "groups","class": 'details-control'},
+                    {"data": "InnerIpAddress"},
+{#                    {"data": "PublicIpAddress","class": 'details-control'},#}
+                    {"data": "Cpu","class": 'details-control', "orderable": false},
+                    {"data": "InstanceType","class": 'details-control'},
+                    {"data": "ZoneId","class": 'details-control'},
+                    {"data": "Status"},
+                    {"data": "id"}
+                ],
+                "columnDefs": [
+                    {
+                        "orderable": false,
+                        "targets": 0,
+                        "render": function (data, type, row, meta) {
+                            return '<input type="checkbox" name="selected_server" value="' + data + '">';
+                        }
+                    }, {
+                        "targets": 1,
+                        "render": function (data, type, row, meta) {
+                            return '<button type="button" class="btn btn-default clipboard" data-clipboard-text="'+data+'" title="' + data + '\nID: ' + row.InstanceId + '">' + data + '</button>';
+                        }
+                    }, {
+                        "targets": 2,
+                        "render": function (data, type, row, meta) {
+                            if(data){
+                                var result = [];
+                                $.each(data, function(i, g){
+                                    result.push(g.name);
+                                });
+                                return result.join(' ');
+                            }
+                            return '—';
+                        }
+                    },
+                    {
+                        "targets": 3,
+                        "render": function (data, type, row, meta) {
+                            var inner_ip = data;
+                            var public_ip = row.PublicIpAddress;
+                            var result = "";
+                            if(inner_ip){
+{#                                result += '<div>'+inner_ip+'<i class="innerip">内</i></div>';#}
+                                result += '<button class="btn btn-default clipboard" data-clipboard-text="'+inner_ip+'" aria-label="Copied!" type="button"><i class="innerip">内</i>'+inner_ip+'</button>';
+                            }
+                            if(inner_ip && public_ip){
+                                result += '<br>';
+                            }
+                            if(public_ip){
+                                result += '<button class="btn btn-default clipboard" data-clipboard-text="'+public_ip+'" aria-label="Copied!" type="button"><i class="publicip">外</i>'+public_ip+'</button>';
+                            }
+                            return result;
+                        }
+                    },
+                    {
+                        "targets": 4,
+                        "render": function (data, type, row, meta) {
+                            if(row.InstanceType == 'SLB'){
+                                return "-";
+                            }
+                            var cpu = data;
+                            var tmp = (row.Memory / 1024.0).toFixed(1);
+                            var memory = (parseInt(tmp) == tmp ? parseInt(tmp) : tmp);
+                            var type_flag = '';
+                            var title_flag = '';
+                            if(row.DiskType == 'SSD' || row.DiskType == 'EFFICIENCY'){
+                                type_flag = row.DiskType[0];
+                                title_flag = 'SSD';
+                                if(row.DiskType == 'EFFICIENCY'){
+                                    title_flag = '混合硬盘';
+                                }
+                            }
+                            var disk = row.DiskSize + type_flag;
+                            var title = 'CPU核心数: ' + cpu + '\n内存: ' + memory
+                                    + ' GB\n硬盘: ' + row.DiskSize + ' GB' + (title_flag ? "(" + title_flag + ")":"");
+                            return '<span title="' + title + '">' + cpu + ' / ' + memory + ' / ' + disk + '</span>';
+                        }
+                    },
+                    {
+                        "targets": -2,
+                        "render": function (data, type, row, meta) {
+                            if(["Running", "active"].indexOf(data) >= 0){
+                                return "运行中";
+                            }
+                            if(["Stopped", "stopped", "inactive"].indexOf(data) >= 0){
+                                return "已停止";
+                            }
+                            if(["Starting", "starting"].indexOf(data) >= 0){
+                                return "正在启动";
+                            }
+                            if(["Stopping", "stopping"].indexOf(data) >= 0){
+                                return "正在停止";
+                            }
+                            return data;
+
+                        }
+                    },
+                    {
+                        "targets": -1,
+                        "render": function (data, type, row, meta) {
+                            if(row.server_location=='aliyun' || row.server_location=='ksyun'){
+                                return "<button class='btn btn-default del_btn' type='button' data-id='" + data + "'>删除</button>"
+                            }
+                            else{
+                                return "<button class='btn btn-default del_btn' type='button' data-id='" + data + "'>删除</button>"+"&nbsp;"+"<button class='btn btn-warning modify_btn' type='button' data-id='" + data + "'>修改</button>"
+                            }
+                        }
+                    }
+                    , {
+                        "targets": -3,
+                        "render": function (data, type, row, meta) {
+                            if(!data){
+                                data = row.RegionId;
+                            }
+                            if(row.InstanceType == 'SLB'){
+                                data = '<span title="区域:'+row.RegionId+'\n主可用区: '+ data+'">' + row.RegionId + '</span>';
+                            }
+                            if(row.server_location){
+                                return data + " [" + row.server_location + "]";
+                            }else{
+                                return data;
+                            }
+                        }
+                    }
+
+
+                ],
+                "order": [[1, 'asc']],
+
+                "oLanguage": {
+                    "sProcessing": "正在加载中......",
+                    "sLengthMenu": "每页显示 _MENU_ 条记录",
+                    "sZeroRecords": "没有数据！",
+                    "sEmptyTable": "表中无数据存在！",
+                    "sInfo": "当前显示 _START_ 到 _END_ 条，共 _TOTAL_ 条记录",
+                    "sInfoEmpty": "显示0到0条记录",
+                    "sInfoFiltered": "数据表中共为 _MAX_ 条记录",
+                    //"sSearch" : "搜索",
+                    "oPaginate": {
+                        "sFirst": "首页",
+                        "sPrevious": "上一页",
+                        "sNext": "下一页",
+                        "sLast": "末页"
+                    }
+                },
+
+                // 根据状态值，改变行颜色
+                "createdRow": function (row, data, index) {
+                    if (data.connect <= 0){
+                        $("td", row).css("background", '#eee'); //灰色
+                    }
+                    else if (data.Status == 'Stopped') {
+                        $('td', row).css('background', '#FF9797'); //红色
+                    }
+                    else if (data.Status == 'Stopping') {
+                        $('td', row).css('background', '#FFF4C1'); //黄色
+                    }
+                    else if (data.Status == 'Starting') {
+                        $('td', row).css('background', '#CEFFCE'); //绿色
+                    }
+
+                }
+
+            });
+
+            // 选中操作
+            table.on('click', 'td.num', function () {
+                var $row = $(this).parent("tr");
+                $row.toggleClass('selected');
+                $row.find("td:first").find("input[name='selected_server']").prop('checked', $row.hasClass("selected"));
+                var select_all = true;
+                $table.find("input[name='selected_server']").each(function () {
+                    if (!$row.prop("checked")) {
+                        select_all = false;
+                        return false;
+                    }
+                });
+                $table.find("input[name='check_all']").prop('checked', select_all);
+            });
+            $table.find("input[name='check_all']").click(function () {
+                // 判断是否已经存在选中
+                if (!$(this).prop("checked")) {
+                    $table.find("input[name='selected_server']:checked").prop('checked', false).parents("tr").removeClass("selected");
+                } else {
+                    $table.find("input[name='selected_server']:not(:checked)").prop('checked', true).parents("tr").addClass("selected");
+                }
+            });
+
+            $table.find("tbody").on('click', 'td.details-control', function () {
+                var tr = $(this).closest('tr');
+                var row = table.row(tr);
+                if (row.child.isShown()) {
+                    // This row is already open - close it
+                    row.child.hide();
+                    tr.removeClass('shown');
+                }
+                else {
+                    // Open this row
+                    row.child(format(row.data())).show();
+                    tr.addClass('shown');
+                }
+{#                return false;#}
+            });
+
+            // 搜索框聚焦自动选中文本
+            $("#id_kw").focus(function(){
+                $(this).select();
+            });
+
+            //显示隐藏列
+            $('.toggle-vis').on('change', function (e) {
+                e.preventDefault();
+                var column = table.column($(this).attr('data-column'));
+                column.visible(!column.visible());
+            });
+
+            $('.showcol').click(function () {
+               $('.showul').toggle();
+                return false;
+            });
+            $(document).click(function(e){
+                if($(e.target).parents("ul.showul").size() == 0 && !$(e.target).hasClass('showul')){
+                     $('.showul').hide();
+                }
+            });
+           //获取表格宽度赋值给右侧弹出层
+           wt = $('.wt100').width();
+           $('.showslider').css('right', -wt);
+
+           //关闭右侧弹出层
+           $('.closediv').click(function () {
+               $(this).parent('.showslider').animate({
+                   right: -wt
+               }, 200);
+               $('.clickdom').attr('isclick', true)
+           });
+
+            //删除
+            function batch_delete(server_ids) {
+                simple_ajax({
+                    url: "{% url 'server:do_operate' %}",
+                    data: {
+                        "id": server_ids,
+                        "kws": "remove"  //传到前端关键字一个字符串,前端进行判断，进行删除操作
+                    },
+                    success: function (data) {
+                        if (data.result == true) {
+                            table.ajax.reload()
+                        } else {
+                            alert("删除失败！" + data.message)
+                        }
+                    }
+                })
+            }
+
+            $("#batch_delete").click(function () {
+                var datas = table.rows('.selected').data();
+                var length = datas.length;
+                if (length > 0) {
+                    if (confirm("您确定要删除这" + length + "个Server吗？")) {
+                        var server_ids = [];
+                        for (i = 0; i < length; i++) {
+                            server_ids.push(datas[i].id);
+                        }
+                        batch_delete(server_ids)
+                    }
+                } else {
+                    alert('请至少选择一个Server');
+                }
+            });
+
+            //行上的删除按钮
+            $table.delegate('.del_btn', 'click', function () {
+                if (confirm("您确定要删除该Server吗？")) {
+                    batch_delete([$(this).attr("data-id")]);
+                }
+                return false;
+            });
+
+            var $myModal = $("#myModal");
+            var $connect_again = $("#connect_again");
+            $table.delegate('i.log', 'click', function () {
+                var id = $(this).attr("data-id");
+                simple_ajax({
+                    url: '{% url 'server:view_log' srv_id='99999' %}'.replace('99999', id),
+                    success: function (data) {
+                        var message = data.message || '暂无日志';
+                        message = message.replace(/\n/g, '<br>').replace(/\s{2}/g, '&nbsp;&nbsp;');
+                        if (data.result == true) {
+                            $("#log_content").html(message);
+                            $connect_again.attr("data-id", id).html("重新连接").attr("disabled", false);
+                            $myModal.modal('show');
+                        } else {
+                            alert("网络发生异常，请重试！");
+                        }
+                    }
+                });
+                return false;
+            });
+
+            $connect_again.click(function () {
+                var id = $(this).attr("data-id");
+                $connect_again.html("正在重连").attr("disabled", true);
+                simple_ajax({
+                    url: '{% url 'server:connect' srv_id='99999' %}'.replace('99999', id),
+                    success: function (data) {
+                        var message = data.message || '暂无日志';
+                        message = message.replace(/\n/g, '<br>').replace(/\s{2}/g, '&nbsp;&nbsp;');
+                        if (data.result == true) {
+                            $("#log_content").html(message + '<div class="alert alert-success">连接成功！</div>');
+                            table.ajax.reload();
+                        } else {
+                            $("#log_content").html(message + '<div class="alert alert-success">连接失败！</div>');
+                        }
+                        $connect_again.html("重新连接").attr("disabled", false);
+                    }
+                })
+            });
+
+
+            //修改按钮
+            $table.delegate('.modify_btn', 'click', function(){
+                window.location.href = '/server/modify/' + $(this).attr("data-id") + '/';
+            });
+
+
+
+            //搜索
+            $("#search_form").submit(function () {
+                var search_query = $(this).serialize();
+                table.ajax.url("{% url 'server:job_list_page' %}?" + search_query).load();
+                return false;
+            });
+
+            //更新服务器信息
+            function update_info(server_ids) {
+                simple_ajax({
+                    url: "{% url 'server:update_info' %}",
+                    data: {"id": server_ids},  //传参id到后端views
+                })
+            }
+
+            function get_selected_ids(){
+                var datas = table.rows('.selected').data();
+                var length = datas.length;
+                if (length > 0) {
+                    var server_ids = [];
+                    for (i = 0; i < length; i++) {
+                        server_ids.push(datas[i].id);
+                    }
+                    return server_ids;
+                }
+                return null;
+            }
+            //获取srv id的值
+            $("#btn_update_info").click(function () {
+                var server_ids = get_selected_ids();
+                if (confirm("您确定要更新这" + length + "个Server吗？")) {
+                    update_info(server_ids)
+                } else {
+                    alert('请至少选择一个Server');
+                }
+            });
+            $("#btn_bash").click(function(){
+                var ids = get_selected_ids();
+                if(ids){
+                    window.location.href = "{% url 'operating:index' %}?server=" + ids.join(',');
+                }else{
+                    alert("请至少选择一个Server");
+                }
+            });
+            $("#btn_filetransfer").click(function(){
+                var ids = get_selected_ids();
+                if(ids){
+                    window.location.href = "{% url 'operating:filetransfer' %}?server=" + ids.join(',');
+                }else{
+                    alert("请至少选择一个Server");
+                }
+            });
+            $("#btn_job").click(function(){
+                var ids = get_selected_ids();
+                if(ids){
+                    window.location.href = "{% url 'operating:addjob' %}?server=" + ids.join(',');
+                }else{
+                    alert("请至少选择一个Server");
+                }
+            });
+            var clipboard = new Clipboard('.clipboard');
+
+            clipboard.on('success', function(e) {
+                $(e.trigger).attr("aria-label", "复制成功!").addClass("tooltipped tooltipped-s");
+                e.clearSelection();
+            });
+
+            clipboard.on('error', function(e) {
+                var $trigger = $(e.trigger);
+                $trigger.attr("aria-label", "复制失败!请按Ctrl+C复制").addClass("tooltipped tooltipped-s");
+                /* $trigger.attr("aria-label", "复制失败!请按Ctrl+C复制").addClass("tooltipped tooltipped-s").siblings("input[type='text']").remove();
+                $trigger.after($('<input type="text" class="hidden_cliptext" value="'+$(e.trigger).attr("data-clipboard-text")+'"/>'));
+                e.clearSelection();
+                $trigger.siblings("input[type='text']").focus().select(); */
+            });
+
+            $table.on("mouseleave", ".clipboard", function(){
+                $(this).removeClass("tooltipped tooltipped-s");
+            });
+
+            $("#export").click(function(){
+                window.location.href = "{% url 'server:export' %}?" + $("#search_form").serialize();
+            });
+        })
+    </script>
+{% endblock %}

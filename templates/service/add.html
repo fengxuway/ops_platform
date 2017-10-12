@@ -1,0 +1,447 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+
+{% block css %}
+    <style>
+        form.form-horizontal label.control-label {
+            text-align: left;
+        }
+
+        .file-box {
+            position: relative;
+            width: 70px
+        }
+
+        .txt {
+            height: 22px;
+            border: 1px solid #cdcdcd;
+            width: 180px;
+        }
+
+        {#    .btn{ background-color:#FFF; border:1px solid #CDCDCD;height:24px; width:70px;}#}
+        .file {
+            position: absolute;
+            top: 0;
+            left: 0px;
+            height: 24px;
+            filter: alpha(opacity:0);
+            opacity: 0;
+            width: 70px
+        }
+
+        #textfield {
+            height: 30px;
+            font-size: 12px;
+        }
+
+        table th, table, td {
+            text-align: center;
+        }
+
+        #file_list button {
+            height: 28px;
+            font-size: 12px;
+        }
+
+        #file_list td:nth-last-child(1) {
+            padding: 4px;
+        }
+
+        #selected_server_list {
+            padding-top: 20px;
+        }
+
+        .large .modal-dialog {
+            width: 60%; /* respsonsive width */
+        }
+
+        table.table > tbody > tr > td.progress_bar {
+            padding: 8px 0 0;
+        }
+
+        .upload_progress {
+            height: 3px;
+            margin-top: 5px;
+            background: #4af;
+            width: 0%;
+        }
+    </style>
+
+{% endblock %}
+{% block body %}
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                添加service
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li class="active">服务实例管理</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+
+                        <div class="box-body table-responsive row">
+                            <div class="col-sm-10 col-sm-offset-1">
+                                {#                                <form id="server_form" action="{% url 'service:add' %}" method="post" role="form" class="form-horizontal" onsubmit="return validate()" enctype="multipart/form-data">#}
+                                {#                                    <div class="panel panel-default">#}
+                                {#                                {% csrf_token %}#}
+
+                                {% if message and message.result == False %}
+                                    <div class="alert alert-danger"><strong>添加失败：</strong>{{ message.message }}</div>
+                                {% endif %}
+                                <form id="server_form" class="form-horizontal" role="form"
+                                      action="{% if srv %}#{% else %}{% url 'service:add' %}{% endif %}" method="post"
+                                      onsubmit="return validate()" enctype="multipart/form-data">
+                                    <input id="id_id" name="id" type="hidden" value="{{ srv.id }}"/>
+                                    <input name="service_id" type="hidden" value="{{ srv.service_id }}"/>
+                                    <input name="type" type="hidden"
+                                           value="{% if srv %}update{% else %}add{% endif %}"/>
+                                    {% csrf_token %}
+
+                                    <!-- 判断 java/php 环境 -->
+                                    <div id="tips"></div>
+
+                                    <div class="form-group">
+                                        <label for="id_server" class="col-sm-2 control-label">选择服务器</label>
+                                        <div class="col-sm-10">
+                                            <button type="button" id="id_server" class="btn btn-primary id_server">选择服务器
+                                            </button>
+                                            <div id="selected_server_list">
+                                                <table id="selected_server_table"
+                                                       class="table table-bordered table-hover">
+                                                    <thead>
+                                                    <tr class="success">
+                                                        <th>主机名</th>
+                                                        <th>内网IP</th>
+                                                        <th>外网IP</th>
+                                                        <th>操作</th>
+                                                        <th>状态</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody></tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+
+
+                                    <div class="form-group">
+                                        <label for="id_service_type" class="col-sm-2 control-label">服务类型</label>
+
+                                        <div class="col-sm-10">
+                                            <select class="form-control" name="service_type" id="id_service_type">
+                                                <option value="">请选择服务类型</option>
+                                                {% data_option 'service' %}
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_version" class="col-sm-2 control-label">镜像版本</label>
+
+                                        <div class="col-sm-10">
+                                            <select class="form-control" name="version" id="id_version">
+                                                <option value="">请选择版本</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_version" class="col-sm-2 control-label">镜像列表</label>
+
+                                        <div class="col-sm-10">
+                                            <input type="hidden" id="image_id" name="image_id" value="">
+                                            <ul class="list-group" id="ul_image_list">
+                                                <li>请先选择服务类别和版本</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="id_config_file" class="col-sm-2 control-label">上传配置文件</label>
+
+                                        <div class="col-sm-10">
+                                            <input type="file" class="form-control" id="id_config_file"
+                                                   name="config_file">
+                                        </div>
+                                    </div>
+{#                                    <div class="form-group">#}
+{#                                        <label for="id_service_name" class="col-sm-2 control-label">服务实例名称</label>#}
+{##}
+{#                                        <div class="col-sm-10">#}
+{#                                            <input type="text" class="form-control" id="id_service_name"#}
+{#                                                   name="service_name"#}
+{#                                                   placeholder="服务实例名称" value="{{ srv.user }}" readonly="true"#}
+{#                                                   data-str="{{ service_instance_str }}">#}
+{#                                        </div>#}
+{#                                    </div>#}
+                                    <div class="form-group">
+                                        <label for="id_remark" class="col-sm-2 control-label">备注</label>
+
+                                        <div class="col-sm-10">
+                                                <textarea id="id_remark" class="form-control" rows="3"
+                                                          name="remark">{{ srv.remark }}</textarea>
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <div class="col-sm-offset-2 col-sm-10">
+                                            <button type="button" id="submit_btn" class="btn btn-primary">保存并部署
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </form>
+
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- /.content -->
+    </div><!-- /.content-wrapper -->
+
+    <div class="modal fade large" id="myModal" tabindex="-1" role="dialog"
+         aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close"
+                            data-dismiss="modal" aria-hidden="true">
+                        &times;
+                    </button>
+                    <h4 class="modal-title" id="myModalLabel">
+                        <strong>请选择目标服务器</strong>
+                    </h4>
+                </div>
+                <div class="modal-body">
+
+                    <table id="server_table" class="display table table-bordered table-hover dataTable" cellspacing="0"
+                           width="100%">
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th>主机名</th>
+                            <th>内网IP</th>
+                            <th>外网IP</th>
+                            <th>机房</th>
+                        </tr>
+                        </thead>
+                        <tbody></tbody>
+
+                    </table>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default"
+                            data-dismiss="modal">取消
+                    </button>
+                    <button type="button" class="btn btn-primary"
+                            id="add_server_btn">添加
+                    </button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal -->
+
+    </div>
+
+{% endblock %}
+{% block script %}
+    <script src="{% static 'js/jquery.html5_upload.js' %}"></script>
+    <script>
+
+        var url_server_list = "{% url 'server:job_list_page' %}";  //用于弹出的摸态框中进行搜索过滤
+
+        function validate() {
+
+        }
+
+        $(function () {
+            var $area = $("#id_area");
+            var $server = $("#id_server");
+            var $service_type = $("#id_service_type");
+            var $version = $("#id_version");
+{#            var $service_name = $("#id_service_name");#}
+            var $tips = $("#tips");
+            $area.change(function () {
+                var area = $(this).val();
+                if (area != '') {
+                    simple_ajax({
+                        url: '{% url 'server:search_by_area' %}',
+                        data: {
+                            area: area
+                        },
+                        success: function (data) {
+                            var html = '<option value="">请选择Server</option>';
+                            if (data.result == false) {
+                                alert("Server获取错误：" + data.message)
+                            } else {
+                                $.each(data, function (i, v) {
+                                    html += '<option value="' + v.id + '">' + v.hostname + '</option>';
+                                });
+                            }
+                            $server.empty().append(html);
+                        }
+                    });
+                }
+            });
+            $service_type.change(function () {
+                var service_name = $(this).val();
+                if (service_name != '') {
+                    var server = $server.val();
+                    if (server != '') {
+                        var server_text = $server.find("option:selected").text();
+                        $service_name.val(server_text + '-' + service_name + '-' + $service_name.attr("data-str"));
+                    }
+                    simple_ajax({
+                        url: '{% url 'image:search_by_service' %}',
+                        data: {
+                            service_name: service_name
+                        },
+                        success: function (data) {
+                            if (data.result == false) {
+                                alert("版本获取错误：" + data.message);
+                            } else {
+                                var html = '<option value="">请选择版本</option>';
+                                if (data.length > 0) {
+                                    $.each(data, function (i, v) {
+                                        html += '<option value="' + v.version + '">' + v.version + '</option>';
+                                    });
+                                    $version.empty().append(html);
+                                } else {
+                                    $version.empty().append('<option value="">暂无镜像</option>');
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    $version.html('<option value="">请先选择服务类型</option>');
+                }
+            });
+
+            function image_info(image, active) {
+                var s = '<li class="list-group-item ' +
+                        (active ? "active" : '')
+                        + '" data-id="' + image.id + '">' +
+                        '<h3>' + image.name + '</h3>' +
+                        '<p>镜像名称：' + image.file_name +
+                        '<br>' + image.remark;
+                if (image.config_path) {
+                    s += '<strong ><br><a href="{% url 'image:download' %}?id=' + image.id + '" class="download_conf" style="color:#33ee33">点击下载配置文件</a></strong>';
+                }
+                s += '</p></li>';
+                return s;
+            }
+
+            //点击选择框，选择版本后，触发事件，进行一系列判断取值，ansible操作等
+            var $image_id = $("#image_id");
+            $version.change(function () {
+                var version = $(this).val();
+                // 取出server id的值
+                var srv_list = []
+                $.each($('#selected_server_table').find("[name='server']"), function(i, item){
+                    srv_list.push($(item).val())
+                    });
+    {#                console.log(srv_list);#}
+                    var service_name = $service_type.val();
+    {#                console.log(service_name)#}
+                    var server_text = $server.find("option:selected").text();
+    {#                console.log(server_text)#}
+                    var img_ver = $('#id_version').val()
+                    //
+                    if (version) {
+                        simple_ajax({
+                            url: '{% url 'image:search_image' %}',
+                            data: {version: version, service_name: $service_type.val()},
+                            success: function (data) {
+                                if (data.result == false) {
+                                    alert("镜像获取错误：" + data.message);
+                                } else {
+                                    var html = '';
+                                    if (data.length == 0) {
+                                        $image_id.val('');
+                                    }
+                                    $.each(data, function (i, v) {
+                                        if (i == 0) {
+                                            $image_id.val(v.id);
+                                            html += image_info(v, true);
+                                        } else {
+                                            html += image_info(v);
+                                        }
+                                    });
+                                    $("#ul_image_list").html(html);
+                                }
+                            }
+                        })
+
+                        // 检查java/php等环境
+                        simple_ajax({
+                            url: '{% url 'service:check_env' %}',
+                            data: {server_id: srv_list, service_name: service_name, server_text: server_text,img_ver: img_ver},
+                            success: function (data) {
+                                $.each($('#selected_server_table').find('[name="server"]').parent(),function(i,items){  //循环选择服务器对应的主机名列
+                                    var key = $(items).html().split('<')[0] //从前端选择的服务器中取出主机名
+                                    var val = data[key]  //从后端json字典中取出主机对应的状态来
+                                    $(this).parent().children().last().html(val)  //替换当前对象的行所对应的状态的值为从后端获取的状态值
+                                });
+                                console.log(data)
+                            }
+                        })
+
+                    }
+                });
+
+
+            var $ul_image_list = $("#ul_image_list");
+            $ul_image_list.delegate("li.list-group-item", 'click', function () {
+                $(this).addClass("active").siblings().removeClass("active");
+                $image_id.val($(this).attr("data-id"));
+            });
+
+
+            //点击提交按钮时候，判断选择的服务器，状态是否更新完成，如果未更新完毕，则弹框提示;如果服务器出现不可安装状态，也弹框提示不可安装
+            $("#submit_btn").click(function () {
+                 var flag = true;
+                 $.each($('#selected_server_table').children().next().children().children().last(),function(i,items){
+                     if($(this).html().indexOf("校验中,请稍等。。。") >= 0){
+                         flag = false;
+                         return false;
+                     }
+                     else if($(this).html().indexOf("not ansible_host conf") >= 0) {
+                         flag = false;
+                         return false;
+                     }
+                     else if($(this).html().indexOf("java uninstalled") >= 0) {
+                         flag = false;
+                         return false;
+                     }
+                     else if($(this).html().indexOf("server unreachable") >= 0) {
+                         flag = false;
+                         return false;
+                     }
+                     else if($(this).html().indexOf("nginx,php,memchache uninstalled") >= 0) {
+                         flag = false;
+                         return false;
+                     }
+                });
+                if(flag){
+                     $("#server_form").submit();
+                }else {
+                    alert('请查看当前server状态，确认可安装后，才可安装!！');
+                }
+            })
+        })
+
+    </script>
+    <script src="{% static 'js/page/addservices.js' %}"></script>
+{% endblock %}

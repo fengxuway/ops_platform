@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load data_option_tags %}
+
+{% block body %}
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <section class="content-header">
+            <h1>
+                新增镜像
+                {#                    <small>控制面板</small>#}
+            </h1>
+            <ol class="breadcrumb">
+                <li><a href="{% url 'index' %}"><i class="fa fa-dashboard"></i> 首页</a></li>
+                <li class="active">新增镜像</li>
+            </ol>
+        </section>
+
+        <!-- Main content -->
+        <section class="content">
+
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="box">
+                        <div class="box-body" >
+                            <div id="tips">
+                            <!-- 判断文件是否上传成功 -->
+                            {% if upload_message == 1 %}
+                                <div id="alert-sucess" class="alert alert-success" role="alert"><strong>上传成功 !</strong></div>
+                            {% endif %}
+                            {% if upload_message == 0 %}
+                                <div class="alert alert-danger" role="alert"><strong>上传失败 !</strong></div>
+                            {% endif %}
+                            {% if upload_message == 2 %}
+                                <div class="alert alert-danger" role="alert"><strong>上传文件存在，请重新选择 !</strong></div>
+                            {% endif %}
+                            </div>
+                            <!-- 上传镜像到upload下的相应目录 -->
+                            <form action="{% url 'image:upload' %}" method="post" enctype="multipart/form-data" accept-charset="utf-8">
+                                {% csrf_token %}
+                                <br >
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>镜像ID:</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <input name="image_id" type="text" class="form-control" id="image_id" readonly value="{{ img_id }}">
+                                    </div>
+                                </div>
+                                <br>
+
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>选择镜像：</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+{#                                        <input type="file" name="t_file" id="img_file" onchange="" />#}
+                                        <input type="file" name="t_file" id="img_file"/>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>选择配置文件：</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <input type="file" name="t2_file" id="config_file"/>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>镜像名称：</strong>
+                                    </div>
+                                    <div class="col-xs-8">
+                                        <!-- readonly value中的值是 上传镜像中image_file中获取的文件名-->
+                                        <input name="image_name" type="text" class="form-control" id="img_name"  readonly value="">
+                                    </div>
+                                </div>
+                                <br>
+
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>服务镜像版本:</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <input name="image_version" type="text" class="form-control" id="img_version" readonly value="">
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>服务:</strong>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <select id="img_select" name="service_name" class="form-control">
+                                            <option value="" selected="selected">请选择服务</option>
+                                            {% data_option 'service' %}
+                                    </select>
+                                    </div>
+                                </div>
+
+                                <br>
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <strong>备注:</strong>
+                                    </div>
+                                    <div class="col-xs-8">
+                                        <textarea name="remark" class="form-control" rows="4"></textarea>
+                                    </div>
+                                </div>
+                                <br>
+                                <div class="row">
+                                    <div class="col-xs-2">
+                                        <button type="button" onclick="location='{% url 'image:index' %}'">返回</button>
+                                    </div>
+                                    <div class="col-xs-2">
+                                        <button type="submit">上传镜像</button>
+                                    </div>
+                                </div>
+                                <br>
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+    </div>
+    </section><!-- /.content -->
+    </div><!-- /.content-wrapper -->
+
+{% endblock %}
+
+{% block script %}
+    <script src="{% static "admin_lte/plugins/datatables/jquery.dataTables.js" %}"></script>
+    <script src="{% static "js/ajaxfileupload.js" %}"></script>
+    <script src="{% static "admin_lte/plugins/datatables/dataTables.bootstrap.min.js"%}"></script>
+    <script>
+    function tips(level, message){
+        var strong = '';
+        switch(level){
+            case 'warning': strong = '警告：';break;
+            case 'success': strong = '成功：';break;
+            case 'info':    strong = '信息：';break;
+            case 'danger':  strong = '错误：';break;
+        }
+        return '<div class="alert alert-'+level+'" role="alert"><strong>'+strong+'</strong>'+message+'</div>'
+    }
+    $(function(){
+        var $img_file = $("#img_file");
+        var $img_select = $("#img_select");
+        var $tips = $("#tips");
+        var $img_version = $("#img_version");
+        var $config_file = $("#config_file");
+        $img_file.change(function(){
+            if($img_file[0].files.length > 0){
+                var file_name = $img_file[0].files[0].name.toLowerCase();
+                if(!file_name.endsWith('.rpm')){
+                    $tips.html(tips('warning', '镜像文件请选择RPM格式'));
+                    $img_file.val('');
+                    return false;
+                }
+                var names = file_name.split('-');
+                if(names.length >= 2){
+                    $("#img_name").val(names[0] + '-' + names[1]);
+                    $img_select.val(names[0]);
+                    $img_version.val(names[1]);
+                    if(!$img_select.val()){
+                        $tips.html(tips('warning', '您尚未添加服务名：['+names[0]+
+                                '] <a href="{% url 'options:index' %}" class="alert-link">立即添加</a>'));
+                    }else{
+                        $tips.html('');
+                    }
+                }else{
+                    $img_file.val('');
+                    $tips.html(tips('warning', 'RPM文件格式不符合标准！（格式：服务名-版本号-其他信息.rpm）'));
+                }
+            }
+        });
+        $config_file.change(function(){
+            if($config_file[0].files.length > 0){
+                var file_name = $config_file[0].files[0].name.toLowerCase();
+                if(!file_name.endsWith('.ini') && !file_name.endsWith('.conf')){
+                    $tips.html(tips('warning', '镜像文件请选择ini或conf格式'));
+                    $config_file.val('');
+                    return false;
+                }else{
+                    $tips.html('');
+                }
+
+            }
+        })
+    })
+
+    </script>
+{% endblock %}
